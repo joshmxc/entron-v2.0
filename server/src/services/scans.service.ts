@@ -101,9 +101,13 @@ export async function processScan(
   }
 
   if (welcomeSmsClaimed && guest.phone) {
-    const body = `Welcome ${guest.firstName} ${guest.lastName}! Your check-in for ${guest.event.name} is confirmed. Enjoy the event.`;
+    const guestName = `${guest.firstName} ${guest.lastName}`.trim();
+    const body =
+      `Karibu ${guestName}! ` +
+      `Tunafurahi kukukaribisha kwenye ${guest.event.name}. ` +
+      `Umethibitishwa kuingia kwenye tukio.`;
     try {
-      const sms = await sendSMS(guest.phone, body);
+      const sms = await sendSMS(guest.phone, body, "HARUSI");
       await prisma.outboundMessage.create({
         data: {
           sentBy: staffId,
