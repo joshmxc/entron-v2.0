@@ -306,3 +306,39 @@ export async function sendWhatsAppMessage(
 
   return String(msg.messageId);
 }
+
+export async function testWhatsAppTemplate(
+  to: string,
+  personalisationValue: string,
+  account?: string,
+  template?: string,
+  messageParameter?: string
+): Promise<{ messageId: string; message: string }> {
+  if (!isNextSmsWhatsAppConfigured()) {
+    throw new Error(
+      "NextSMS WhatsApp requires an API token, active WhatsApp account, and approved template."
+    );
+  }
+
+  const destination = normalizePhone(to);
+  const res = await axios.post(
+    `${BASE_URL}/whatsapp/v2/test/text/single`,
+    {
+      account: account || config.nextsms.whatsappAccount,
+      template: template || config.nextsms.whatsappTemplate,
+      to: [Number(destination)],
+      personalisation: [
+        { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue },
+      ],
+    },
+    { headers: headers(), timeout: 15_000 }
+  );
+
+  const msg = res.data?.messages?.[0];
+  return {
+    messageId: msg?.messageId === undefined || msg?.messageId === null
+      ? ""
+      : String(msg.messageId),
+    message: String(msg?.message || ""),
+  };
+}

@@ -74,6 +74,8 @@ export default function MessagesPage() {
   const [sending, setSending] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [whatsappTestResult, setWhatsappTestResult] = useState<{ message: string } | null>(null);
+  const [whatsappTesting, setWhatsappTesting] = useState(false);
   const [senderId, setSenderId] = useState("");
   const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
   const [whatsappAccount, setWhatsappAccount] = useState("");
@@ -83,6 +85,26 @@ export default function MessagesPage() {
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const charactersPerSms = encodingUnicode ? 70 : 160;
   const smsPages = Math.ceil(message.length / charactersPerSms) || 1;
+
+  const runWhatsAppAnalysis = async () => {
+    setAnalysisVisible(true);
+    const phone = previewGuest?.phone;
+    if (!phone) return;
+    setWhatsappTesting(true);
+    setWhatsappTestResult(null);
+    try {
+      const res = await api.post("/sms/whatsapp/test", {
+        phone,
+        personalisation: whatsappPersonalisation,
+        account: activeWhatsappAccount,
+        template: activeWhatsappTemplate,
+        parameter: smsStatus?.whatsappMessageParameter || "var1",
+      });
+      setWhatsappTestResult(res.data.data);
+    } finally {
+      setWhatsappTesting(false);
+    }
+  };
 
   const filtered = useMemo(() => guests.filter((g) => {
     const q = search.toLowerCase();
@@ -309,6 +331,11 @@ export default function MessagesPage() {
                 <p className="text-xs text-slate-500">
                   Template has no image header. The approved quick-reply buttons are included exactly as shown above.
                 </p>
+                {whatsappTestResult?.message && (
+                  <p className="text-xs text-green-400">
+                    NextSMS test response: {whatsappTestResult.message}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex items-center justify-between text-xs text-slate-500">
@@ -343,11 +370,11 @@ export default function MessagesPage() {
           {(channel === "WHATSAPP" || channel === "BOTH") && (
             <button
               type="button"
-              onClick={() => setAnalysisVisible((visible) => !visible)}
+              onClick={runWhatsAppAnalysis}
               disabled={resolvedIds.length === 0}
               className="w-full rounded-lg border border-entron-dark-border py-2.5 text-sm font-medium text-slate-300 hover:border-slate-500"
             >
-              {analysisVisible ? "Hide Preview" : "Analyze"}
+              {whatsappTesting ? "Analyzing..." : "Analyze"}
             </button>
           )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0} className="btn-primary w-full py-3">

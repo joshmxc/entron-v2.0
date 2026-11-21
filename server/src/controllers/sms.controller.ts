@@ -14,6 +14,7 @@ import { Request, Response } from "express";
 import {
   sendSMS,
   sendBulkSMS,
+  testWhatsAppTemplate,
   getSMSBalance,
   normalizePhone,
   isNextSmsConfigured,
@@ -217,5 +218,30 @@ export async function getBalance(_req: Request, res: Response): Promise<void> {
   } catch (err) {
     console.error("[SMS] Balance check error:", err);
     res.status(500).json({ success: false, error: "Could not fetch balance" });
+  }
+}
+
+export async function testWhatsApp(req: Request, res: Response): Promise<void> {
+  const { phone, personalisation, account, template, parameter } = req.body as {
+    phone?: string;
+    personalisation?: string;
+    account?: string;
+    template?: string;
+    parameter?: string;
+  };
+
+  if (!phone || !personalisation) {
+    res.status(400).json({ success: false, error: "phone and personalisation are required" });
+    return;
+  }
+
+  try {
+    const data = await testWhatsAppTemplate(phone, personalisation, account, template, parameter);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(502).json({
+      success: false,
+      error: err instanceof Error ? err.message : "WhatsApp test failed",
+    });
   }
 }

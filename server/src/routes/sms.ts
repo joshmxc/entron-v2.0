@@ -24,5 +24,6 @@ router.get("/balance", ctrl.getBalance);
 router.post("/send",   ctrl.sendSingle);
 router.post("/bulk",   ctrl.sendBulk);
 router.post("/test",   ctrl.testSMS);
+router.post("/whatsapp/test", ctrl.testWhatsApp);
 
 export default router;

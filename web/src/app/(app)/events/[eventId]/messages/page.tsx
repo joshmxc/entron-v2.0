@@ -52,6 +52,8 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [analysisVisible, setAnalysisVisible] = useState(false);
+  const [whatsappTestResult, setWhatsappTestResult] = useState<{ message: string } | null>(null);
+  const [whatsappTesting, setWhatsappTesting] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; details: { name: string; phone: string; status: string; channel: string }[] } | null>(null);
   const [senderId, setSenderId] = useState("");
   const smsStatus = smsStatusData?.data ?? null;
@@ -133,6 +135,26 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
     ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
     : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
+
+  const runWhatsAppAnalysis = async () => {
+    setAnalysisVisible(true);
+    const phone = previewGuest?.phone;
+    if (!phone) return;
+    setWhatsappTesting(true);
+    setWhatsappTestResult(null);
+    try {
+      const res = await api.post("/sms/whatsapp/test", {
+        phone,
+        personalisation: whatsappPersonalisation,
+        account: activeWhatsappAccount,
+        template: activeWhatsappTemplate,
+        parameter: smsStatus?.whatsappMessageParameter || "var1",
+      });
+      setWhatsappTestResult(res.data.data);
+    } finally {
+      setWhatsappTesting(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -346,6 +368,11 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                 <p className="text-xs text-slate-500">
                   Template has no image header. The approved quick-reply buttons are included exactly as shown above.
                 </p>
+                {whatsappTestResult?.message && (
+                  <p className="text-xs text-green-400">
+                    NextSMS test response: {whatsappTestResult.message}
+                  </p>
+                )}
               </div>
             )}
 
@@ -389,11 +416,11 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
           {(channel === "WHATSAPP" || channel === "BOTH") && (
             <button
               type="button"
-              onClick={() => setAnalysisVisible((visible) => !visible)}
+              onClick={runWhatsAppAnalysis}
               disabled={resolvedIds.length === 0}
               className="w-full rounded-lg border border-entron-dark-border py-3 text-sm font-medium text-slate-300 hover:border-slate-500"
             >
-              {analysisVisible ? "Hide Preview" : "Analyze"}
+              {whatsappTesting ? "Analyzing..." : "Analyze"}
             </button>
           )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0}
