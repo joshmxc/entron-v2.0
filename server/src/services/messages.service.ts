@@ -101,6 +101,20 @@ export async function sendBulkMessages(opts: {
     for (const guest of withPhone) {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest.firstName, guest.lastName);
+      const cardUrl = guest.invitations[0]?.cardUrl;
+      if (!cardUrl) {
+        await prisma.outboundMessage.create({
+          data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", status: "FAILED" },
+        });
+        results.failed++;
+        results.details.push({
+          name: `${guest.firstName} ${guest.lastName}`,
+          phone: guest.phone!,
+          status: "Generated card image required",
+          channel: "WHATSAPP",
+        });
+        continue;
+      }
       try {
         const externalId = await sendWhatsAppMessage(
           guest.phone!,
@@ -155,7 +169,18 @@ export async function listMessages(eventId: string, page = 1, pageSize = 50) {
 export async function getEventGuests(eventId: string) {
   return prisma.guest.findMany({
     where: { eventId },
-    select: { id: true, firstName: true, lastName: true, phone: true, guestType: true },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      guestType: true,
+      invitations: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { cardUrl: true },
+      },
+    },
     orderBy: { lastName: "asc" },
   });
 }

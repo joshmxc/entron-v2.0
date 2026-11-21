@@ -36,7 +36,11 @@ export async function sendMessages(req: Request, res: Response) {
 }
 
 export async function getGuests(req: Request, res: Response) {
-  const data = await svc.getEventGuests(req.params.eventId);
+  const guests = await svc.getEventGuests(req.params.eventId);
+  const data = guests.map(({ invitations, ...guest }) => ({
+    ...guest,
+    cardUrl: invitations[0]?.cardUrl ?? null,
+  }));
   res.json({ success: true, data });
 }
 
