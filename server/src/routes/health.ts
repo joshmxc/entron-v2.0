@@ -6,7 +6,13 @@ const router = Router();
 router.get("/", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({ success: true, status: "ok", db: "connected", uptime: process.uptime() });
+    res.json({
+      success: true,
+      status: "ok",
+      db: "connected",
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
   } catch {
     res.status(503).json({ success: false, status: "error", db: "disconnected" });
   }
