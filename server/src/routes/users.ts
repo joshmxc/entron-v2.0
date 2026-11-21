@@ -9,16 +9,26 @@ router.use(authenticate, requireAdmin);
 
 const createSchema = z.object({
   name: z.string().min(2),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9._-]+$/),
   phone: z.string().min(9),
   password: z.string().min(6),
   role: z.enum(["ADMIN", "STAFF"]).default("STAFF"),
+  canScan: z.boolean().optional(),
+  canManageGuests: z.boolean().optional(),
+  canDesignCards: z.boolean().optional(),
+  canSendMessages: z.boolean().optional(),
 });
 
 const updateSchema = z.object({
   name: z.string().min(2).optional(),
+  username: z.string().min(3).regex(/^[a-zA-Z0-9._-]+$/).optional(),
   isActive: z.boolean().optional(),
   role: z.enum(["ADMIN", "STAFF"]).optional(),
   password: z.string().min(6).optional(),
+  canScan: z.boolean().optional(),
+  canManageGuests: z.boolean().optional(),
+  canDesignCards: z.boolean().optional(),
+  canSendMessages: z.boolean().optional(),
 });
 
 router.get("/", async (_req, res) => {

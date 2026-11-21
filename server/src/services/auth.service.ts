@@ -7,11 +7,18 @@ import { config } from "../config";
 const REFRESH_DAYS = 7;
 
 export async function login(phone: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { phone } });
+  const user = await prisma.user.findFirst({
+    where: { OR: [{ phone }, { username: phone }] },
+  });
   if (!user || !user.isActive) throw { status: 401, message: "Invalid credentials" };
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) throw { status: 401, message: "Invalid credentials" };
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastSeenAt: new Date() },
+  });
 
   const payload = { sub: user.id, role: user.role, name: user.name };
   const accessToken = signAccessToken(payload);
@@ -27,7 +34,17 @@ export async function login(phone: string, password: string) {
   return {
     accessToken,
     refreshToken,
-    user: { id: user.id, name: user.name, role: user.role, language: user.language },
+    user: {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      role: user.role,
+      language: user.language,
+      canScan: user.canScan,
+      canManageGuests: user.canManageGuests,
+      canDesignCards: user.canDesignCards,
+      canSendMessages: user.canSendMessages,
+    },
   };
 }
 
@@ -57,38 +74,82 @@ export async function logout(token: string) {
 
 export async function createUser(data: {
   name: string;
+  username: string;
   phone: string;
   password: string;
   role: "ADMIN" | "STAFF";
+  canScan?: boolean;
+  canManageGuests?: boolean;
+  canDesignCards?: boolean;
+  canSendMessages?: boolean;
 }) {
-  const existing = await prisma.user.findUnique({ where: { phone: data.phone } });
-  if (existing) throw { status: 409, message: "Phone number already registered" };
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ phone: data.phone }, { username: data.username }] },
+  });
+  if (existing) throw { status: 409, message: "Phone number or username already registered" };
 
   const passwordHash = await bcrypt.hash(data.password, 12);
   return prisma.user.create({
-    data: { name: data.name, phone: data.phone, passwordHash, role: data.role },
-    select: { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true },
+    data: {
+      name: data.name,
+      username: data.username,
+      phone: data.phone,
+      passwordHash,
+      role: data.role,
+      canScan: data.role === "ADMIN" ? true : (data.canScan ?? true),
+      canManageGuests: data.role === "ADMIN" ? true : (data.canManageGuests ?? false),
+      canDesignCards: data.role === "ADMIN" ? true : (data.canDesignCards ?? false),
+      canSendMessages: data.role === "ADMIN" ? true : (data.canSendMessages ?? false),
+    },
+    select: {
+      id: true, name: true, username: true, phone: true, role: true, isActive: true,
+      canScan: true, canManageGuests: true, canDesignCards: true, canSendMessages: true,
+      lastSeenAt: true, createdAt: true,
+    },
   });
 }
 
 export async function listUsers() {
   return prisma.user.findMany({
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true, language: true },
+    select: {
+      id: true, name: true, username: true, phone: true, role: true, isActive: true,
+      canScan: true, canManageGuests: true, canDesignCards: true, canSendMessages: true,
+      lastSeenAt: true, createdAt: true, language: true,
+    },
   });
 }
 
-export async function updateUser(id: string, data: Partial<{ name: string; isActive: boolean; role: "ADMIN" | "STAFF"; password: string }>) {
+export async function updateUser(id: string, data: Partial<{
+  name: string;
+  username: string;
+  isActive: boolean;
+  role: "ADMIN" | "STAFF";
+  password: string;
+  canScan: boolean;
+  canManageGuests: boolean;
+  canDesignCards: boolean;
+  canSendMessages: boolean;
+}>) {
   const update: Record<string, unknown> = {};
   if (data.name) update.name = data.name;
   if (typeof data.isActive === "boolean") update.isActive = data.isActive;
   if (data.role) update.role = data.role;
+  if (data.username) update.username = data.username;
+  if (typeof data.canScan === "boolean") update.canScan = data.canScan;
+  if (typeof data.canManageGuests === "boolean") update.canManageGuests = data.canManageGuests;
+  if (typeof data.canDesignCards === "boolean") update.canDesignCards = data.canDesignCards;
+  if (typeof data.canSendMessages === "boolean") update.canSendMessages = data.canSendMessages;
   if (data.password) update.passwordHash = await bcrypt.hash(data.password, 12);
 
   return prisma.user.update({
     where: { id },
     data: update,
-    select: { id: true, name: true, phone: true, role: true, isActive: true },
+    select: {
+      id: true, name: true, username: true, phone: true, role: true, isActive: true,
+      canScan: true, canManageGuests: true, canDesignCards: true, canSendMessages: true,
+      lastSeenAt: true,
+    },
   });
 }
 

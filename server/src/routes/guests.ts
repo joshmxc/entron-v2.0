@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireStaff, requireAdmin } from "../middleware/auth";
+import { authenticate, requireStaff, requireAdmin, requirePermission } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { uploadExcel } from "../middleware/upload";
 import * as ctrl from "../controllers/guests.controller";
@@ -36,12 +36,12 @@ router.delete("/duplicates", requireAdmin, ctrl.removeDuplicates);
 router.get("/import/batches", ctrl.listImportBatches);
 router.get("/import/batches/:batchId/download", ctrl.downloadImportSource);
 router.get("/", ctrl.list);
-router.post("/", validateBody(createSchema), ctrl.create);
-router.post("/import/upload-url", ctrl.createImportUploadUrl);
-router.post("/import/preview", uploadExcel.single("file"), ctrl.previewImport);
-router.post("/import", uploadExcel.single("file"), ctrl.importExcel);
+router.post("/", validateBody(createSchema), requirePermission("canManageGuests"), ctrl.create);
+router.post("/import/upload-url", requirePermission("canManageGuests"), ctrl.createImportUploadUrl);
+router.post("/import/preview", requirePermission("canManageGuests"), uploadExcel.single("file"), ctrl.previewImport);
+router.post("/import", requirePermission("canManageGuests"), uploadExcel.single("file"), ctrl.importExcel);
 router.get("/:id", ctrl.get);
-router.patch("/:id", validateBody(updateSchema), ctrl.update);
+router.patch("/:id", validateBody(updateSchema), requirePermission("canManageGuests"), ctrl.update);
 router.delete("/:id", requireAdmin, ctrl.remove);
 router.post("/:id/regenerate-qr", ctrl.regenerateQR);
 

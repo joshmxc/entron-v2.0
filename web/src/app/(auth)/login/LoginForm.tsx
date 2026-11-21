@@ -9,7 +9,7 @@ import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 
 const schema = z.object({
-  phone: z.string().min(9, "Phone number is required"),
+  phone: z.string().min(3, "Username or phone number is required"),
   password: z.string().min(6, "Password is required"),
 });
 
@@ -47,13 +47,13 @@ export default function LoginForm() {
       )}
 
       <div className="input-group">
-        <label>Phone Number</label>
+        <label>Username or Phone Number</label>
         <div className="relative">
           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             {...register("phone")}
             type="tel"
-            placeholder="0700 000 000"
+            placeholder="username or 0700 000 000"
             className="pl-10"
           />
         </div>

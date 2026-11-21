@@ -4,8 +4,13 @@ import { persist } from "zustand/middleware";
 interface AuthUser {
   id: string;
   name: string;
+  username?: string;
   role: "ADMIN" | "STAFF";
   language: string;
+  canScan?: boolean;
+  canManageGuests?: boolean;
+  canDesignCards?: boolean;
+  canSendMessages?: boolean;
 }
 
 interface AuthState {

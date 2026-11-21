@@ -61,10 +61,16 @@ enum MessageChannel {
 model User {
   id           String   @id @default(uuid())
   name         String
+  username     String   @unique
   phone        String   @unique
   passwordHash String   @map("password_hash")
   role         Role     @default(STAFF)
   isActive     Boolean  @default(true) @map("is_active")
+  canScan      Boolean  @default(true) @map("can_scan")
+  canManageGuests Boolean @default(false) @map("can_manage_guests")
+  canDesignCards Boolean @default(false) @map("can_design_cards")
+  canSendMessages Boolean @default(false) @map("can_send_messages")
+  lastSeenAt   DateTime? @map("last_seen_at")
   language     String   @default("sw")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

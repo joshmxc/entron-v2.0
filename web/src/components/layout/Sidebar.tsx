@@ -14,8 +14,8 @@ import { useTheme } from "@/hooks/useTheme";
 const navItems = [
   { href: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { href: "/events",      label: "Events",        icon: Calendar },
-  { href: "/invitations", label: "Card Design",   icon: Palette },
-  { href: "/messages",    label: "Messages/SMS",  icon: MessageSquare },
+  { href: "/invitations", label: "Card Design",   icon: Palette, permission: "canDesignCards" as const },
+  { href: "/messages",    label: "Messages/SMS",  icon: MessageSquare, permission: "canSendMessages" as const },
   { href: "/staff",       label: "Staff",         icon: UserCog, adminOnly: true },
   { href: "/settings",    label: "Settings",      icon: Settings },
 ];
@@ -52,7 +52,14 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems
-          .filter((item) => !item.adminOnly || user?.role === "ADMIN")
+          .filter((item) => {
+            if (item.adminOnly) return user?.role === "ADMIN";
+            if ("permission" in item && item.permission) {
+              if (user?.role === "ADMIN") return true;
+              return Boolean(user?.[item.permission]);
+            }
+            return true;
+          })
           .map(({ href, label, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
