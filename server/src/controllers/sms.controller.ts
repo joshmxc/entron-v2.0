@@ -34,7 +34,7 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
       baseUrl:      "https://messaging-service.co.tz",
       configured:   isNextSmsConfigured(),
       apiTokenSet:  !!config.nextsms.apiToken,
-      senderId:     config.nextsms.senderId || "ENTRON",
+      senderId:     config.nextsms.senderId || "SENDOFF",
       senderIds:    config.nextsms.senderIds.length
         ? config.nextsms.senderIds
         : [config.nextsms.senderId].filter(Boolean),
@@ -167,7 +167,7 @@ export async function testSMS(req: Request, res: Response): Promise<void> {
 
   const testMessage =
     `[Entron] SMS test successful! ` +
-    `Sender: ${config.nextsms.senderId || "ENTRON"} | ` +
+    `Sender: ${config.nextsms.senderId || "SENDOFF"} | ` +
     new Date().toLocaleTimeString("en-GB");
 
   try {
