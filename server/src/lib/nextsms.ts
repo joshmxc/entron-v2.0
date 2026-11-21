@@ -262,7 +262,13 @@ export async function getSMSBalance(): Promise<{
   }
 }
 
-export async function sendWhatsAppMessage(to: string, text: string): Promise<string> {
+export async function sendWhatsAppMessage(
+  to: string,
+  text: string,
+  account?: string,
+  template?: string,
+  messageParameter?: string
+): Promise<string> {
   if (!isNextSmsWhatsAppConfigured()) {
     throw new Error(
       "NextSMS WhatsApp requires an API token, active WhatsApp account, and approved template."
@@ -277,11 +283,11 @@ export async function sendWhatsAppMessage(to: string, text: string): Promise<str
   const res = await axios.post(
     `${BASE_URL}/whatsapp/v2/text/single`,
     {
-      account: config.nextsms.whatsappAccount,
-      template: config.nextsms.whatsappTemplate,
+      account: account || config.nextsms.whatsappAccount,
+      template: template || config.nextsms.whatsappTemplate,
       to: [Number(destination)],
       personalisation: [
-        { [config.nextsms.whatsappMessageParameter]: text },
+        { [messageParameter || config.nextsms.whatsappMessageParameter]: text },
       ],
     },
     { headers: headers(), timeout: 15_000 }

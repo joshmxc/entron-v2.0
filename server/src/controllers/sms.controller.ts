@@ -39,6 +39,11 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
         ? config.nextsms.senderIds
         : [config.nextsms.senderId].filter(Boolean),
       whatsappConfigured: isNextSmsWhatsAppConfigured(),
+      whatsappAccount: config.nextsms.whatsappAccount,
+      whatsappAccounts: config.nextsms.whatsappAccounts,
+      whatsappTemplate: config.nextsms.whatsappTemplate,
+      whatsappTemplates: config.nextsms.whatsappTemplates,
+      whatsappMessageParameter: config.nextsms.whatsappMessageParameter,
     },
   });
 }

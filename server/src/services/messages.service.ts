@@ -17,9 +17,12 @@ export async function sendBulkMessages(opts: {
   message: string;
   channel: "WHATSAPP" | "SMS" | "BOTH";
   senderId?: string;
+  whatsappAccount?: string;
+  whatsappTemplate?: string;
+  whatsappMessageParameter?: string;
   sentBy: string;
 }) {
-  const { guestIds, message, channel, senderId, sentBy } = opts;
+  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, sentBy } = opts;
   const results = {
     sent: 0,
     failed: 0,
@@ -97,7 +100,13 @@ export async function sendBulkMessages(opts: {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest.firstName, guest.lastName);
       try {
-        const externalId = await sendWhatsAppMessage(guest.phone!, body);
+        const externalId = await sendWhatsAppMessage(
+          guest.phone!,
+          body,
+          whatsappAccount,
+          whatsappTemplate,
+          whatsappMessageParameter
+        );
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", externalId, status: "SENT" },
         });

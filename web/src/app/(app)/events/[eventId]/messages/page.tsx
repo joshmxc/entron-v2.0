@@ -60,6 +60,20 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
       ? [smsStatus.senderId]
       : [];
   const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
+  const whatsappAccounts: string[] = smsStatus?.whatsappAccounts?.length
+    ? smsStatus.whatsappAccounts
+    : smsStatus?.whatsappAccount
+      ? [smsStatus.whatsappAccount]
+      : [];
+  const whatsappTemplates: string[] = smsStatus?.whatsappTemplates?.length
+    ? smsStatus.whatsappTemplates
+    : smsStatus?.whatsappTemplate
+      ? [smsStatus.whatsappTemplate]
+      : [];
+  const [whatsappAccount, setWhatsappAccount] = useState("");
+  const [whatsappTemplate, setWhatsappTemplate] = useState("");
+  const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
+  const activeWhatsappTemplate = whatsappTemplate || smsStatus?.whatsappTemplate || whatsappTemplates[0] || "";
 
   // ── Filtered guest list ──
   const filtered = useMemo(() => {
@@ -91,6 +105,9 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         message,
         channel,
         senderId: channel === "WHATSAPP" ? undefined : activeSenderId,
+        whatsappAccount: channel === "SMS" ? undefined : activeWhatsappAccount,
+        whatsappTemplate: channel === "SMS" ? undefined : activeWhatsappTemplate,
+        whatsappMessageParameter: smsStatus?.whatsappMessageParameter || "var1",
       });
       setSendResult(res.data.data);
       await mutateHistory();
@@ -102,6 +119,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const charCount = message.length;
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const smsPages = Math.ceil(charCount / (encodingUnicode ? 70 : 160)) || 1;
+  const whatsappPreview = `Habari ${message || "{var1}"}${activeWhatsappTemplate === "wedding_invitation" ? " ," : ","}\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -157,6 +175,26 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                   </select>
                 </div>
                 <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
+                  <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
+                </div>
+              </div>
+            )}
+            {(channel === "WHATSAPP" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">WhatsApp Account <span className="text-red-400">*</span></label>
+                  <select value={activeWhatsappAccount} onChange={(e) => setWhatsappAccount(e.target.value)} className="w-full text-sm">
+                    {whatsappAccounts.map((account) => <option key={account} value={account}>{account} — 255651389518</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Approved Template <span className="text-red-400">*</span></label>
+                  <select value={activeWhatsappTemplate} onChange={(e) => setWhatsappTemplate(e.target.value)} className="w-full text-sm">
+                    {whatsappTemplates.map((template) => <option key={template} value={template}>{template}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
                   <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
                   <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
                 </div>
@@ -248,12 +286,16 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
 
           {/* Message composer */}
           <div className="card space-y-3">
-            <h2 className="font-semibold text-slate-200 text-sm">Message</h2>
+            <h2 className="font-semibold text-slate-200 text-sm">
+              {channel === "WHATSAPP" || channel === "BOTH" ? "Template Personalisation" : "Message"}
+            </h2>
             <div className="space-y-1">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={"Write your message here...\n\nFor WhatsApp, this is inserted into the configured approved-template placeholder.\nYou can use:\n{{name}} — full name\n{{firstName}} — first name\n{{lastName}} — last name"}
+                placeholder={channel === "WHATSAPP" || channel === "BOTH"
+                  ? "Enter the value for {var1}, for example {{name}}"
+                  : "Write your message here...\n\nYou can use:\n{{name}} — full name\n{{firstName}} — first name\n{{lastName}} — last name"}
                 rows={5}
                 className="text-sm w-full"
               />
@@ -264,6 +306,12 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                 )}
               </div>
             </div>
+            {(channel === "WHATSAPP" || channel === "BOTH") && (
+              <div className="rounded-xl border border-green-700/40 bg-green-950/20 p-3 space-y-1">
+                <p className="text-xs font-medium text-green-400">WhatsApp preview</p>
+                <p className="whitespace-pre-line text-sm text-slate-200">{whatsappPreview}</p>
+              </div>
+            )}
 
             {/* Variables quick-insert */}
             <div className="flex gap-2 flex-wrap">

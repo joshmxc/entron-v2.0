@@ -11,7 +11,7 @@ export async function listMessages(req: Request, res: Response) {
 }
 
 export async function sendMessages(req: Request, res: Response) {
-  const { guestIds, message, channel, senderId } = req.body;
+  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter } = req.body;
   if (!message || !channel) { res.status(400).json({ success: false, error: "message and channel required" }); return; }
 
   const allGuests = await svc.getEventGuests(req.params.eventId);
@@ -25,6 +25,9 @@ export async function sendMessages(req: Request, res: Response) {
     message,
     channel,
     senderId,
+    whatsappAccount,
+    whatsappTemplate,
+    whatsappMessageParameter,
     sentBy: req.user!.sub,
   });
   res.json({ success: true, data: result });

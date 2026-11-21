@@ -89,9 +89,21 @@ export const config = {
         .map((senderId) => senderId.trim())
         .filter(Boolean)
     ),
-    whatsappAccount: optional("NEXTSMS_WHATSAPP_ACCOUNT", ""),
-    whatsappTemplate: optional("NEXTSMS_WHATSAPP_TEMPLATE", ""),
-    whatsappMessageParameter: optional("NEXTSMS_WHATSAPP_MESSAGE_PARAMETER", "message"),
+    whatsappAccount: optional("NEXTSMS_WHATSAPP_ACCOUNT", "Entron cards"),
+    whatsappAccounts: (
+      optional("NEXTSMS_WHATSAPP_ACCOUNTS", "Entron cards")
+        .split(",")
+        .map((account) => account.trim())
+        .filter(Boolean)
+    ),
+    whatsappTemplate: optional("NEXTSMS_WHATSAPP_TEMPLATE", "wedding_invitation"),
+    whatsappTemplates: (
+      optional("NEXTSMS_WHATSAPP_TEMPLATES", "wedding_invitation,weddinginvitation")
+        .split(",")
+        .map((template) => template.trim())
+        .filter(Boolean)
+    ),
+    whatsappMessageParameter: optional("NEXTSMS_WHATSAPP_MESSAGE_PARAMETER", "var1"),
   },
 
   storage: {
