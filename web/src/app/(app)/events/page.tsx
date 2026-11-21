@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import useSWR from "swr";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Calendar, MapPin, Users, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
@@ -28,6 +28,18 @@ export default function EventsPage() {
   const isAdmin = user?.role === "ADMIN";
 
   const events: EventSummary[] = data?.data ?? [];
+
+  useEffect(() => {
+    if (user?.role === "STAFF" && events.length === 1) {
+      const event = events[0];
+      setActiveEvent({
+        id: event.id,
+        name: event.name,
+        venue: event.venue,
+        startDate: event.startDate,
+      });
+    }
+  }, [events, setActiveEvent, user?.role]);
 
   const removeEvent = async (event: EventSummary) => {
     const confirmed = window.confirm(

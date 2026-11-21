@@ -2,9 +2,20 @@
 import Link from "next/link";
 import { QrCode } from "lucide-react";
 import { useEventStore } from "@/store/eventStore";
+import { useAuthStore } from "@/store/authStore";
 
 export default function ScannerLandingPage() {
   const { activeEvent } = useEventStore();
+  const { user } = useAuthStore();
+
+  if (user?.role !== "ADMIN" && !user?.canScan) {
+    return (
+      <div className="text-center py-16">
+        <QrCode className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+        <p className="text-slate-400">You do not have permission to scan QR codes.</p>
+      </div>
+    );
+  }
 
   if (!activeEvent) {
     return (
@@ -27,9 +38,11 @@ export default function ScannerLandingPage() {
       <Link href={`/events/${activeEvent.id}/scan`} className="btn-primary btn-lg px-12">
         Start Scanning
       </Link>
-      <Link href="/events" className="text-sm text-slate-400 hover:text-slate-200">
-        Change Event
-      </Link>
+      {user?.role === "ADMIN" && (
+        <Link href="/events" className="text-sm text-slate-400 hover:text-slate-200">
+          Change Event
+        </Link>
+      )}
     </div>
   );
 }

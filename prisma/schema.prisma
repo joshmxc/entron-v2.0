@@ -78,8 +78,23 @@ model User {
   scans         Scan[]
   sentMessages  OutboundMessage[]
   refreshTokens RefreshToken[]
+  eventAssignments StaffEventAssignment[]
 
   @@map("users")
+}
+
+model StaffEventAssignment {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  eventId   String   @map("event_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId])
+  @@index([eventId])
+  @@map("staff_event_assignments")
 }
 
 model Event {
@@ -99,6 +114,7 @@ model Event {
   guests   Guest[]
   scans    Scan[]
   payments Payment[]
+  staffAssignments StaffEventAssignment[]
 
   @@map("events")
 }

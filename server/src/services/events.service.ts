@@ -8,6 +8,17 @@ export async function listEvents(activeOnly = false) {
   });
 }
 
+export async function listAssignedEvents(userId: string, activeOnly = false) {
+  return prisma.event.findMany({
+    where: {
+      ...(activeOnly ? { isActive: true } : {}),
+      staffAssignments: { some: { userId } },
+    },
+    orderBy: { startDate: "desc" },
+    include: { _count: { select: { guests: true, scans: true } } },
+  });
+}
+
 export async function getEvent(id: string) {
   const event = await prisma.event.findUnique({
     where: { id },

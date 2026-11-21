@@ -11,6 +11,7 @@ interface AuthUser {
   canManageGuests?: boolean;
   canDesignCards?: boolean;
   canSendMessages?: boolean;
+  eventIds?: string[];
 }
 
 interface AuthState {

@@ -1,12 +1,20 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requirePermission, requireStaff } from "../middleware/auth";
+import { authenticate, requirePermission, requireStaff, isEventAssignedToStaff } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { scanLimiter } from "../middleware/rateLimiter";
 import * as ctrl from "../controllers/scans.controller";
 
 const router = Router();
 router.use(authenticate, requireStaff);
+router.use(async (req, res, next) => {
+  const eventId = req.body?.eventId || req.query.eventId;
+  if (req.user!.role !== "ADMIN" && eventId && !await isEventAssignedToStaff(req.user!.sub, String(eventId))) {
+    res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });
+    return;
+  }
+  next();
+});
 
 const scanSchema = z.object({
   qrCode: z.string().uuid(),

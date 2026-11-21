@@ -19,6 +19,10 @@ export async function login(phone: string, password: string) {
     where: { id: user.id },
     data: { lastSeenAt: new Date() },
   });
+  const assignments = await prisma.staffEventAssignment.findMany({
+    where: { userId: user.id },
+    select: { eventId: true },
+  });
 
   const payload = { sub: user.id, role: user.role, name: user.name };
   const accessToken = signAccessToken(payload);
@@ -44,6 +48,7 @@ export async function login(phone: string, password: string) {
       canManageGuests: user.canManageGuests,
       canDesignCards: user.canDesignCards,
       canSendMessages: user.canSendMessages,
+      eventIds: assignments.map((assignment) => assignment.eventId),
     },
   };
 }
@@ -65,7 +70,11 @@ export async function refresh(token: string) {
   if (!user || !user.isActive) throw { status: 401, message: "User not found" };
 
   const accessToken = signAccessToken({ sub: user.id, role: user.role, name: user.name });
-  return { accessToken };
+  const assignments = await prisma.staffEventAssignment.findMany({
+    where: { userId: user.id },
+    select: { eventId: true },
+  });
+  return { accessToken, eventIds: assignments.map((assignment) => assignment.eventId) };
 }
 
 export async function logout(token: string) {
@@ -82,6 +91,7 @@ export async function createUser(data: {
   canManageGuests?: boolean;
   canDesignCards?: boolean;
   canSendMessages?: boolean;
+  eventIds?: string[];
 }) {
   const existing = await prisma.user.findFirst({
     where: { OR: [{ phone: data.phone }, { username: data.username }] },
@@ -89,7 +99,7 @@ export async function createUser(data: {
   if (existing) throw { status: 409, message: "Phone number or username already registered" };
 
   const passwordHash = await bcrypt.hash(data.password, 12);
-  return prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       name: data.name,
       username: data.username,
@@ -107,17 +117,35 @@ export async function createUser(data: {
       lastSeenAt: true, createdAt: true,
     },
   });
+  if (data.role === "STAFF" && data.eventIds?.length) {
+    await prisma.staffEventAssignment.createMany({
+      data: data.eventIds.map((eventId) => ({ userId: user.id, eventId })),
+      skipDuplicates: true,
+    });
+  }
+  const assignments = data.role === "STAFF"
+    ? await prisma.staffEventAssignment.findMany({
+        where: { userId: user.id },
+        select: { eventId: true },
+      })
+    : [];
+  return { ...user, eventIds: assignments.map((assignment) => assignment.eventId) };
 }
 
 export async function listUsers() {
-  return prisma.user.findMany({
+  const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: {
       id: true, name: true, username: true, phone: true, role: true, isActive: true,
       canScan: true, canManageGuests: true, canDesignCards: true, canSendMessages: true,
       lastSeenAt: true, createdAt: true, language: true,
+      eventAssignments: { select: { eventId: true } },
     },
   });
+  return users.map(({ eventAssignments, ...user }) => ({
+    ...user,
+    eventIds: eventAssignments.map((assignment) => assignment.eventId),
+  }));
 }
 
 export async function updateUser(id: string, data: Partial<{
@@ -130,6 +158,7 @@ export async function updateUser(id: string, data: Partial<{
   canManageGuests: boolean;
   canDesignCards: boolean;
   canSendMessages: boolean;
+  eventIds?: string[];
 }>) {
   const update: Record<string, unknown> = {};
   if (data.name) update.name = data.name;
@@ -142,7 +171,7 @@ export async function updateUser(id: string, data: Partial<{
   if (typeof data.canSendMessages === "boolean") update.canSendMessages = data.canSendMessages;
   if (data.password) update.passwordHash = await bcrypt.hash(data.password, 12);
 
-  return prisma.user.update({
+  const user = await prisma.user.update({
     where: { id },
     data: update,
     select: {
@@ -151,6 +180,20 @@ export async function updateUser(id: string, data: Partial<{
       lastSeenAt: true,
     },
   });
+  if (data.eventIds) {
+    await prisma.staffEventAssignment.deleteMany({ where: { userId: id } });
+    if (data.eventIds.length) {
+      await prisma.staffEventAssignment.createMany({
+        data: data.eventIds.map((eventId) => ({ userId: id, eventId })),
+        skipDuplicates: true,
+      });
+    }
+  }
+  const assignments = await prisma.staffEventAssignment.findMany({
+    where: { userId: id },
+    select: { eventId: true },
+  });
+  return { ...user, eventIds: assignments.map((assignment) => assignment.eventId) };
 }
 
 export async function deleteUser(id: string) {

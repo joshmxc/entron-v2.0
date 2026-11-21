@@ -3,7 +3,9 @@ import * as eventsService from "../services/events.service";
 
 export async function list(req: Request, res: Response) {
   const activeOnly = req.query.active === "true";
-  const data = await eventsService.listEvents(activeOnly);
+  const data = req.user!.role === "ADMIN"
+    ? await eventsService.listEvents(activeOnly)
+    : await eventsService.listAssignedEvents(req.user!.sub, activeOnly);
   res.json({ success: true, data });
 }
 

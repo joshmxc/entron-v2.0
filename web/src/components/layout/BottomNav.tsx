@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Calendar, QrCode, Palette, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/authStore";
 
 const items = [
   { href: "/dashboard",   label: "Home",     icon: LayoutDashboard },
@@ -14,6 +15,14 @@ const items = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  const visibleItems = items.filter((item) => {
+    if (user?.role === "ADMIN") return true;
+    if (item.href === "/invitations") return Boolean(user?.canDesignCards);
+    if (item.href === "/messages") return Boolean(user?.canSendMessages);
+    if (item.href === "/scanner") return Boolean(user?.canScan);
+    return true;
+  });
 
   return (
     <nav
@@ -21,7 +30,7 @@ export default function BottomNav() {
       style={{ backgroundColor: "var(--surface)", borderTop: "1px solid var(--border)" }}
     >
       <div className="flex items-center justify-around h-16">
-        {items.map(({ href, label, icon: Icon, highlight }) => {
+        {visibleItems.map(({ href, label, icon: Icon, highlight }) => {
           const active = pathname.startsWith(href);
 
           // Icon container background

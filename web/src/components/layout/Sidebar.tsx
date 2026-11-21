@@ -13,7 +13,7 @@ import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { href: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
-  { href: "/events",      label: "Events",        icon: Calendar },
+  { href: "/events",      label: "Events",        icon: Calendar, staff: true as const },
   { href: "/invitations", label: "Card Design",   icon: Palette, permission: "canDesignCards" as const },
   { href: "/messages",    label: "Messages/SMS",  icon: MessageSquare, permission: "canSendMessages" as const },
   { href: "/staff",       label: "Staff",         icon: UserCog, adminOnly: true },

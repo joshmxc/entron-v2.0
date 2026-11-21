@@ -68,3 +68,15 @@ export function requirePermission(
     next();
   };
 }
+
+export async function isEventAssignedToStaff(userId: string, eventId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+  if (user?.role === "ADMIN") return true;
+  const assignment = await prisma.staffEventAssignment.findUnique({
+    where: { userId_eventId: { userId, eventId } },
+  });
+  return !!assignment;
+}

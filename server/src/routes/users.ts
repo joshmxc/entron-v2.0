@@ -17,6 +17,7 @@ const createSchema = z.object({
   canManageGuests: z.boolean().optional(),
   canDesignCards: z.boolean().optional(),
   canSendMessages: z.boolean().optional(),
+  eventIds: z.array(z.string().uuid()).optional(),
 });
 
 const updateSchema = z.object({
@@ -29,6 +30,7 @@ const updateSchema = z.object({
   canManageGuests: z.boolean().optional(),
   canDesignCards: z.boolean().optional(),
   canSendMessages: z.boolean().optional(),
+  eventIds: z.array(z.string().uuid()).optional(),
 });
 
 router.get("/", async (_req, res) => {

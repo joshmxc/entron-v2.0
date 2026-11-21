@@ -1,12 +1,22 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireStaff, requireAdmin, requirePermission } from "../middleware/auth";
+import { authenticate, requireStaff, requireAdmin, requirePermission, isEventAssignedToStaff } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
 import { uploadExcel } from "../middleware/upload";
 import * as ctrl from "../controllers/guests.controller";
 
 const router = Router({ mergeParams: true });
 router.use(authenticate, requireStaff);
+router.use(async (req, res, next) => {
+  if (req.user!.role !== "ADMIN") {
+    const eventId = req.params.eventId;
+    if (!eventId || !await isEventAssignedToStaff(req.user!.sub, eventId)) {
+      res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });
+      return;
+    }
+  }
+  next();
+});
 
 const createSchema = z.object({
   firstName: z.string().min(1),

@@ -44,6 +44,17 @@ export async function adminStats(req: Request, res: Response) {
 export async function staffDashboard(req: Request, res: Response) {
   const staffId = req.user!.sub;
   const { eventId } = req.query;
-  const data = await getStaffStats(staffId, eventId as string | undefined);
+  if (!eventId) {
+    res.status(400).json({ success: false, error: "eventId required" });
+    return;
+  }
+  const assignment = await prisma.staffEventAssignment.findUnique({
+    where: { userId_eventId: { userId: staffId, eventId: eventId as string } },
+  });
+  if (!assignment) {
+    res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });
+    return;
+  }
+  const data = await getStaffStats(staffId, eventId as string);
   res.json({ success: true, data });
 }
