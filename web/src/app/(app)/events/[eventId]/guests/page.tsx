@@ -2,7 +2,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { Plus, Upload, Search, QrCode, CheckCircle, Clock, ArrowLeft, Download, Trash2, CopyCheck } from "lucide-react";
+import { Plus, Upload, Search, QrCode, CheckCircle, Clock, ArrowLeft, Download, Trash2, CopyCheck, Link as LinkIcon } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
@@ -38,6 +38,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
 
   const listKey = `/events/${eventId}/guests?${query}`;
   const { data, error, isLoading, mutate } = useSWR(listKey, fetcher, { refreshInterval: 10000 });
+  const { data: eventData } = useSWR(`/events/${eventId}`, fetcher);
   const isAdmin = user?.role === "ADMIN";
   const { data: duplicateData, error: duplicateError, mutate: mutateDuplicates } = useSWR(
     isAdmin ? `/events/${eventId}/guests/duplicates` : null,
@@ -65,6 +66,18 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
     } finally {
       setDeletingGuestId(null);
     }
+  };
+
+  const copyPublicGuestListLink = async () => {
+    const token = eventData?.data?.publicLookupToken as string | undefined;
+    if (!token) {
+      setActionError("Public guest list link is not available yet.");
+      return;
+    }
+    const link = `${window.location.origin}/guest-list/${eventId}/${token}`;
+    await navigator.clipboard.writeText(link);
+    setActionError("");
+    setActionMessage("Public guest list link copied.");
   };
 
   const exportGuests = async () => {
@@ -119,6 +132,12 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
         </Link>
         <h1 className="page-title flex-1">Guests ({total})</h1>
         <div className="flex gap-2">
+          {isAdmin && (
+            <button type="button" onClick={copyPublicGuestListLink} className="btn-secondary">
+              <LinkIcon className="w-4 h-4" />
+              <span className="hidden sm:inline">Guest List Link</span>
+            </button>
+          )}
           {isAdmin && (
             <Link href={`/events/${eventId}/guests/import`} className="btn-secondary">
               <Upload className="w-4 h-4" />

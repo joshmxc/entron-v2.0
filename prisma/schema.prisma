@@ -99,6 +99,7 @@ model StaffEventAssignment {
 
 model Event {
   id           String    @id @default(uuid())
+  publicLookupToken String? @unique @map("public_lookup_token")
   name         String
   nameSwahili  String?   @map("name_swahili")
   description  String?

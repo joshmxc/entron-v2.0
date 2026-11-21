@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { randomUUID } from "crypto";
 
 export async function listEvents(activeOnly = false) {
   return prisma.event.findMany({
@@ -43,6 +44,7 @@ export async function createEvent(data: {
   return prisma.event.create({
     data: {
       name: data.name,
+      publicLookupToken: randomUUID().replace(/-/g, ""),
       nameSwahili: data.nameSwahili,
       description: data.description,
       venue: data.venue,

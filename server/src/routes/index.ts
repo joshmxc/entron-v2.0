@@ -10,6 +10,7 @@ import dashboardRouter from "./dashboard";
 import healthRouter from "./health";
 import messagesRouter from "./messages";
 import smsRouter from "./sms";
+import publicRouter from "./public";
 
 const router = Router();
 
@@ -24,5 +25,6 @@ router.use("/payments", paymentsRouter);
 router.use("/dashboard", dashboardRouter);
 router.use("/health", healthRouter);
 router.use("/sms", smsRouter);
+router.use("/public", publicRouter);
 
 export default router;
