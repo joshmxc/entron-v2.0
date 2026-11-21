@@ -281,7 +281,12 @@ export default function MessagesPage() {
                     className="px-2 py-0.5 rounded bg-slate-700 font-mono hover:bg-slate-600 transition-colors">{v}</button>
                 ))}
               </div>
-              <span>{message.length} chars · {encodingUnicode ? "Unicode" : "GSM"} · SMS: {smsPages} {smsPages === 1 ? "page" : "pages"}</span>
+              <span>
+                {message.length} chars
+                {(channel === "SMS" || channel === "BOTH") && (
+                  ` · ${encodingUnicode ? "Unicode" : "GSM"} · SMS: ${smsPages} ${smsPages === 1 ? "page" : "pages"}`
+                )}
+              </span>
             </div>
           </div>
 
