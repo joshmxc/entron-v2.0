@@ -16,9 +16,10 @@ export async function sendBulkMessages(opts: {
   guestIds: string[];
   message: string;
   channel: "WHATSAPP" | "SMS" | "BOTH";
+  senderId?: string;
   sentBy: string;
 }) {
-  const { guestIds, message, channel, sentBy } = opts;
+  const { guestIds, message, channel, senderId, sentBy } = opts;
   const results = {
     sent: 0,
     failed: 0,
@@ -49,7 +50,7 @@ export async function sendBulkMessages(opts: {
       }));
 
       const reference = `entron_${Date.now()}`;
-      const bulkResult = await nextSmsBulk(smsPayload, reference);
+      const bulkResult = await nextSmsBulk(smsPayload, reference, senderId);
 
       // Persist each result to DB and tally
       for (let i = 0; i < withPhone.length; i++) {

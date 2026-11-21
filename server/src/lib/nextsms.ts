@@ -82,7 +82,7 @@ export interface BulkSMSResult {
  * Send one SMS via Next SMS.
  * Returns an SMSResult describing whether it succeeded or failed.
  */
-export async function sendSMS(to: string, text: string): Promise<SMSResult> {
+export async function sendSMS(to: string, text: string, senderId?: string): Promise<SMSResult> {
   const dest = normalizePhone(to);
 
   // Simulate when credentials are not configured
@@ -92,7 +92,7 @@ export async function sendSMS(to: string, text: string): Promise<SMSResult> {
   }
 
   const payload = {
-    from: config.nextsms.senderId,
+    from: senderId || config.nextsms.senderId,
     to:   [dest],
     text,
   };
@@ -147,7 +147,8 @@ export async function sendSMS(to: string, text: string): Promise<SMSResult> {
  */
 export async function sendBulkSMS(
   messages: { to: string; text: string }[],
-  reference?: string
+  reference?: string,
+  senderId?: string
 ): Promise<BulkSMSResult> {
   if (!messages.length) return { sent: 0, failed: 0, results: [] };
 
@@ -163,7 +164,7 @@ export async function sendBulkSMS(
 
   const payload: Record<string, unknown> = {
     messages: messages.map((m) => ({
-      from: config.nextsms.senderId,
+      from: senderId || config.nextsms.senderId,
       to:   normalizePhone(m.to),
       text: m.text,
     })),

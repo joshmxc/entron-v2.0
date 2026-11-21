@@ -83,6 +83,10 @@ export const config = {
     apiToken: optional("NEXTSMS_API_TOKEN", ""),
     baseUrl: optional("NEXTSMS_BASE_URL", "https://messaging-service.co.tz/api"),
     senderId: optional("NEXTSMS_SENDER_ID", "ENTRON"),
+    senderIds: optional("NEXTSMS_SENDER_IDS")
+      .split(",")
+      .map((senderId) => senderId.trim())
+      .filter(Boolean),
     whatsappAccount: optional("NEXTSMS_WHATSAPP_ACCOUNT", ""),
     whatsappTemplate: optional("NEXTSMS_WHATSAPP_TEMPLATE", ""),
     whatsappMessageParameter: optional("NEXTSMS_WHATSAPP_MESSAGE_PARAMETER", "message"),

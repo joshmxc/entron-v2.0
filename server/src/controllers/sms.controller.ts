@@ -35,6 +35,9 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
       configured:   isNextSmsConfigured(),
       apiTokenSet:  !!config.nextsms.apiToken,
       senderId:     config.nextsms.senderId || "ENTRON",
+      senderIds:    config.nextsms.senderIds.length
+        ? config.nextsms.senderIds
+        : [config.nextsms.senderId].filter(Boolean),
       whatsappConfigured: isNextSmsWhatsAppConfigured(),
     },
   });
@@ -46,7 +49,7 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
  * Body: { phone: string, message: string }
  */
 export async function sendSingle(req: Request, res: Response): Promise<void> {
-  const { phone, message } = req.body as { phone?: string; message?: string };
+  const { phone, message, senderId } = req.body as { phone?: string; message?: string; senderId?: string };
 
   if (!phone || typeof phone !== "string" || !phone.trim()) {
     res.status(400).json({ success: false, error: "phone is required" });
@@ -68,7 +71,7 @@ export async function sendSingle(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const result = await sendSMS(phone.trim(), message.trim());
+    const result = await sendSMS(phone.trim(), message.trim(), senderId);
 
     if (result.status === "FAILED") {
       res.status(502).json({
@@ -101,9 +104,10 @@ export async function sendSingle(req: Request, res: Response): Promise<void> {
  * Body: { recipients: string[], message: string }
  */
 export async function sendBulk(req: Request, res: Response): Promise<void> {
-  const { recipients, message } = req.body as {
+  const { recipients, message, senderId } = req.body as {
     recipients?: string[];
     message?: string;
+    senderId?: string;
   };
 
   if (!Array.isArray(recipients) || recipients.length === 0) {
@@ -121,7 +125,9 @@ export async function sendBulk(req: Request, res: Response): Promise<void> {
 
   try {
     const result = await sendBulkSMS(
-      recipients.map((p) => ({ to: p, text: message.trim() }))
+      recipients.map((p) => ({ to: p, text: message.trim() })),
+      undefined,
+      senderId
     );
 
     res.json({
@@ -146,7 +152,7 @@ export async function sendBulk(req: Request, res: Response): Promise<void> {
  * Body: { phone: string }
  */
 export async function testSMS(req: Request, res: Response): Promise<void> {
-  const { phone } = req.body as { phone?: string };
+  const { phone, senderId } = req.body as { phone?: string; senderId?: string };
 
   if (!phone || typeof phone !== "string" || !phone.trim()) {
     res.status(400).json({ success: false, error: "phone is required" });
@@ -165,7 +171,7 @@ export async function testSMS(req: Request, res: Response): Promise<void> {
     new Date().toLocaleTimeString("en-GB");
 
   try {
-    const result = await sendSMS(phone.trim(), testMessage);
+    const result = await sendSMS(phone.trim(), testMessage, senderId);
 
     if (result.status === "FAILED") {
       res.status(502).json({

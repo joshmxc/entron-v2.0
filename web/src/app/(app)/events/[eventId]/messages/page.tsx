@@ -37,6 +37,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const { data: guestsData } = useSWR(`/events/${eventId}/messages/guests`, fetcher);
   const { data: historyData, mutate: mutateHistory } = useSWR(`/events/${eventId}/messages?pageSize=100`, fetcher);
   const { data: balanceData } = useSWR(`/events/${eventId}/messages/balance`, fetcher);
+  const { data: smsStatusData } = useSWR("/sms/status", fetcher);
 
   const guests: Guest[] = guestsData?.data ?? [];
   const history: Message[] = historyData?.data ?? [];
@@ -51,6 +52,14 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; details: { name: string; phone: string; status: string; channel: string }[] } | null>(null);
+  const [senderId, setSenderId] = useState("");
+  const smsStatus = smsStatusData?.data ?? null;
+  const senderIds: string[] = smsStatus?.senderIds?.length
+    ? smsStatus.senderIds
+    : smsStatus?.senderId
+      ? [smsStatus.senderId]
+      : [];
+  const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
 
   // ── Filtered guest list ──
   const filtered = useMemo(() => {
@@ -81,6 +90,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         guestIds: resolvedIds,
         message,
         channel,
+        senderId: channel === "WHATSAPP" ? undefined : activeSenderId,
       });
       setSendResult(res.data.data);
       await mutateHistory();
@@ -90,7 +100,8 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   };
 
   const charCount = message.length;
-  const smsPages = Math.ceil(charCount / 160) || 1;
+  const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
+  const smsPages = Math.ceil(charCount / (encodingUnicode ? 70 : 160)) || 1;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -137,6 +148,20 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                 </button>
               ))}
             </div>
+            {(channel === "SMS" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Sender ID <span className="text-red-400">*</span></label>
+                  <select value={activeSenderId} onChange={(e) => setSenderId(e.target.value)} className="w-full text-sm">
+                    {senderIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
+                  <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
+                </div>
+              </div>
+            )}
             {channel === "SMS" && (
               <p className="text-xs text-slate-500">
                 Uses the NextSMS standard SMS service.
@@ -235,7 +260,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
               <div className="flex justify-between text-xs text-slate-500 px-1">
                 <span>Characters: {charCount}</span>
                 {(channel === "SMS" || channel === "BOTH") && (
-                  <span>SMS: {smsPages} {smsPages === 1 ? "page" : "pages"} (~{smsPages * 160} chars max)</span>
+                  <span>{encodingUnicode ? "Unicode" : "GSM"} · SMS: {smsPages} {smsPages === 1 ? "page" : "pages"}</span>
                 )}
               </div>
             </div>

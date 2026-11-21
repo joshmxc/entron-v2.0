@@ -42,10 +42,17 @@ export default function MessagesPage() {
   const { data: guestsData } = useSWR(eventId ? `/events/${eventId}/messages/guests` : null, fetcher);
   const { data: historyData, mutate: mutateHistory } = useSWR(eventId ? `/events/${eventId}/messages?pageSize=200` : null, fetcher);
   const { data: balanceData } = useSWR(eventId ? `/events/${eventId}/messages/balance` : null, fetcher);
+  const { data: smsStatusData } = useSWR("/sms/status", fetcher);
 
   const guests: Guest[] = guestsData?.data ?? [];
   const history: Message[] = historyData?.data ?? [];
   const smsBalance = balanceData?.data ?? null;
+  const smsStatus = smsStatusData?.data ?? null;
+  const senderIds: string[] = smsStatus?.senderIds?.length
+    ? smsStatus.senderIds
+    : smsStatus?.senderId
+      ? [smsStatus.senderId]
+      : [];
 
   const [tab, setTab] = useState<"compose" | "history">("compose");
   const [channel, setChannel] = useState<Channel>("SMS");
@@ -56,6 +63,11 @@ export default function MessagesPage() {
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number } | null>(null);
+  const [senderId, setSenderId] = useState("");
+  const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
+  const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
+  const charactersPerSms = encodingUnicode ? 70 : 160;
+  const smsPages = Math.ceil(message.length / charactersPerSms) || 1;
 
   const filtered = useMemo(() => guests.filter((g) => {
     const q = search.toLowerCase();
@@ -76,7 +88,12 @@ export default function MessagesPage() {
     setSending(true);
     setSendResult(null);
     try {
-      const res = await api.post(`/events/${eventId}/messages/send`, { guestIds: resolvedIds, message, channel });
+      const res = await api.post(`/events/${eventId}/messages/send`, {
+        guestIds: resolvedIds,
+        message,
+        channel,
+        senderId: channel === "WHATSAPP" ? undefined : activeSenderId,
+      });
       setSendResult(res.data.data);
       await mutateHistory();
       setMessage("");
@@ -133,6 +150,20 @@ export default function MessagesPage() {
                 </button>
               ))}
             </div>
+            {(channel === "SMS" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Sender ID <span className="text-red-400">*</span></label>
+                  <select value={activeSenderId} onChange={(e) => setSenderId(e.target.value)} className="w-full text-sm">
+                    {senderIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
+                  <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Recipients */}
@@ -202,7 +233,7 @@ export default function MessagesPage() {
                     className="px-2 py-0.5 rounded bg-slate-700 font-mono hover:bg-slate-600 transition-colors">{v}</button>
                 ))}
               </div>
-              <span>{message.length} chars · SMS: {Math.ceil(message.length / 160) || 1}</span>
+              <span>{message.length} chars · {encodingUnicode ? "Unicode" : "GSM"} · SMS: {smsPages} {smsPages === 1 ? "page" : "pages"}</span>
             </div>
           </div>
 
