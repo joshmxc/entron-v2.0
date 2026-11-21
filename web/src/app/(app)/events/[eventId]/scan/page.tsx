@@ -111,7 +111,17 @@ export default function ScanPage({ params }: { params: Promise<{ eventId: string
 
       {/* Result overlay */}
       {result && (scannerState === "RESULT" || scannerState === "COOLDOWN") && (
-        <ScanResult result={result} onDismiss={startScanning} />
+        <ScanResult
+          result={result}
+          onDismiss={() => {
+            if (mode === "qr") {
+              void startScanning();
+            } else {
+              setUniqueCode("");
+              stopScanning();
+            }
+          }}
+        />
       )}
 
       {/* Start button (if idle) */}
