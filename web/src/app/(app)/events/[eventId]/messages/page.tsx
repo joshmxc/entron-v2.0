@@ -51,6 +51,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
+  const [analysisVisible, setAnalysisVisible] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; details: { name: string; phone: string; status: string; channel: string }[] } | null>(null);
   const [senderId, setSenderId] = useState("");
   const smsStatus = smsStatusData?.data ?? null;
@@ -119,7 +120,19 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const charCount = message.length;
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const smsPages = Math.ceil(charCount / (encodingUnicode ? 70 : 160)) || 1;
-  const whatsappPreview = `Habari ${message || "{var1}"}${activeWhatsappTemplate === "wedding_invitation" ? " ," : ","}\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
+  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
+  const previewName = previewGuest
+    ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
+    : "{var1}";
+  const whatsappPersonalisation = message.trim()
+    ? message
+      .replace(/\{\{name\}\}/g, previewName)
+      .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
+      .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
+    : previewName;
+  const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
+    ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
+    : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -306,10 +319,33 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                 )}
               </div>
             </div>
-            {(channel === "WHATSAPP" || channel === "BOTH") && (
-              <div className="rounded-xl border border-green-700/40 bg-green-950/20 p-3 space-y-1">
-                <p className="text-xs font-medium text-green-400">WhatsApp preview</p>
-                <p className="whitespace-pre-line text-sm text-slate-200">{whatsappPreview}</p>
+            {(channel === "WHATSAPP" || channel === "BOTH") && analysisVisible && (
+              <div className="rounded-xl border border-green-700/40 bg-[#071611] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-green-400">WhatsApp recipient preview</p>
+                  {previewGuest && (
+                    <p className="text-xs text-slate-500">
+                      {previewGuest.firstName} {previewGuest.lastName}
+                    </p>
+                  )}
+                </div>
+                <div className="mx-auto max-w-sm rounded-lg bg-[#1f2c27] border border-white/5 p-3 shadow-lg">
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">
+                    {whatsappPreviewBody}
+                  </p>
+                  <div className="mt-1 flex justify-end text-[10px] text-slate-400">08:25 ✓✓</div>
+                  <div className="mt-3 space-y-1.5 border-t border-white/5 pt-2">
+                    <button type="button" className="w-full rounded-md py-2 text-sm text-green-400">
+                      Nitahudhuria
+                    </button>
+                    <button type="button" className="w-full border-t border-white/5 py-2 text-sm text-green-400">
+                      Sitahudhuria
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Template has no image header. The approved quick-reply buttons are included exactly as shown above.
+                </p>
               </div>
             )}
 
@@ -350,6 +386,16 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
           )}
 
           {/* Send button */}
+          {(channel === "WHATSAPP" || channel === "BOTH") && (
+            <button
+              type="button"
+              onClick={() => setAnalysisVisible((visible) => !visible)}
+              disabled={resolvedIds.length === 0}
+              className="w-full rounded-lg border border-entron-dark-border py-3 text-sm font-medium text-slate-300 hover:border-slate-500"
+            >
+              {analysisVisible ? "Hide Preview" : "Analyze"}
+            </button>
+          )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0}
             className="btn-primary w-full py-3">
             {sending ? (

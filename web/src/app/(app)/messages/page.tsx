@@ -72,6 +72,7 @@ export default function MessagesPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [sending, setSending] = useState(false);
+  const [analysisVisible, setAnalysisVisible] = useState(false);
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number } | null>(null);
   const [senderId, setSenderId] = useState("");
   const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
@@ -79,7 +80,19 @@ export default function MessagesPage() {
   const [whatsappTemplate, setWhatsappTemplate] = useState("");
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
   const activeWhatsappTemplate = whatsappTemplate || smsStatus?.whatsappTemplate || whatsappTemplates[0] || "";
-  const whatsappPreview = `Habari ${message || "{var1}"}${activeWhatsappTemplate === "wedding_invitation" ? " ," : ","}\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
+  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
+  const previewName = previewGuest
+    ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
+    : "{var1}";
+  const whatsappPersonalisation = message.trim()
+    ? message
+      .replace(/\{\{name\}\}/g, previewName)
+      .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
+      .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
+    : previewName;
+  const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
+    ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
+    : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const charactersPerSms = encodingUnicode ? 70 : 160;
   const smsPages = Math.ceil(message.length / charactersPerSms) || 1;
@@ -182,7 +195,7 @@ export default function MessagesPage() {
                 </div>
               </div>
             )}
-            {(channel === "WHATSAPP" || channel === "BOTH") && (
+            {(channel === "WHATSAPP" || channel === "BOTH") && analysisVisible && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-400">WhatsApp Account <span className="text-red-400">*</span></label>
@@ -269,9 +282,32 @@ export default function MessagesPage() {
                 ? "Enter the value for {var1}, for example {{name}}"
                 : "Write your message...\n\nUse {{name}} for guest name"} />
             {(channel === "WHATSAPP" || channel === "BOTH") && (
-              <div className="rounded-xl border border-green-700/40 bg-green-950/20 p-3 space-y-1">
-                <p className="text-xs font-medium text-green-400">WhatsApp preview</p>
-                <p className="whitespace-pre-line text-sm text-slate-200">{whatsappPreview}</p>
+              <div className="rounded-xl border border-green-700/40 bg-[#071611] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-green-400">WhatsApp recipient preview</p>
+                  {previewGuest && (
+                    <p className="text-xs text-slate-500">
+                      {previewGuest.firstName} {previewGuest.lastName}
+                    </p>
+                  )}
+                </div>
+                <div className="mx-auto max-w-sm rounded-lg bg-[#1f2c27] border border-white/5 p-3 shadow-lg">
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">
+                    {whatsappPreviewBody}
+                  </p>
+                  <div className="mt-1 flex justify-end text-[10px] text-slate-400">08:25 ✓✓</div>
+                  <div className="mt-3 space-y-1.5 border-t border-white/5 pt-2">
+                    <button type="button" className="w-full rounded-md py-2 text-sm text-green-400">
+                      Nitahudhuria
+                    </button>
+                    <button type="button" className="w-full border-t border-white/5 py-2 text-sm text-green-400">
+                      Sitahudhuria
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Template has no image header. The approved quick-reply buttons are included exactly as shown above.
+                </p>
               </div>
             )}
             <div className="flex items-center justify-between text-xs text-slate-500">
@@ -303,6 +339,16 @@ export default function MessagesPage() {
           )}
 
           {/* Send button */}
+          {(channel === "WHATSAPP" || channel === "BOTH") && (
+            <button
+              type="button"
+              onClick={() => setAnalysisVisible((visible) => !visible)}
+              disabled={resolvedIds.length === 0}
+              className="w-full rounded-lg border border-entron-dark-border py-2.5 text-sm font-medium text-slate-300 hover:border-slate-500"
+            >
+              {analysisVisible ? "Hide Preview" : "Analyze"}
+            </button>
+          )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0} className="btn-primary w-full py-3">
             {sending
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
