@@ -100,6 +100,7 @@ interface EventGuest {
   tableNumber?: string | null;
   notes?: string | null;
   qrCode: string;
+  uniqueCode?: string;
   invitations?: GuestInvitation[];
 }
 
@@ -141,6 +142,7 @@ const FIELD_SOURCES = [
   ["eventVenue", "Event venue"],
   ["eventDate", "Event date"],
   ["qrCode", "QR value"],
+  ["uniqueCode", "Unique ID"],
 ] as const;
 const FONT_OPTIONS = ["Arial", "Georgia", "Times New Roman", "Helvetica", "Inter", "Playfair Display", "Cormorant Garamond"];
 const STATUS_COLORS: Record<string, string> = {
@@ -214,6 +216,7 @@ function fieldValue(key: string, guest: EventGuest | undefined, event: EventInfo
     case "tableNumber": return guest?.tableNumber ?? "";
     case "notes": return guest?.notes ?? "";
     case "qrCode": return guest?.qrCode ?? "";
+    case "uniqueCode": return guest?.uniqueCode ?? "";
     case "eventName": return event?.name ?? "";
     case "eventVenue": return event?.venue ?? "";
     case "eventDate": return event?.startDate ? new Date(event.startDate).toLocaleDateString() : "";

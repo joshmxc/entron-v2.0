@@ -127,6 +127,7 @@ type CardGuest = {
   notes: string | null;
   custom: unknown;
   qrCode: string;
+  uniqueCode: string;
 };
 
 function valueForBinding(key: string, guest: CardGuest, event: {
@@ -154,6 +155,7 @@ function valueForBinding(key: string, guest: CardGuest, event: {
     case "tableNumber": return guest.tableNumber ?? "";
     case "notes": return guest.notes ?? "";
     case "qrCode": return guest.qrCode;
+    case "uniqueCode": return guest.uniqueCode;
     case "eventName":
     case "event.name": return event.name;
     case "eventVenue":
@@ -243,7 +245,24 @@ export async function generateCards(
   const [allTemplates, event, selectedGuests] = await Promise.all([
     prisma.invitationTemplate.findMany({ where: { eventId } }),
     prisma.event.findUnique({ where: { id: eventId }, select: { name: true, venue: true, startDate: true } }),
-    prisma.guest.findMany({ where: { eventId, id: { in: uniqueGuestIds } } }),
+    prisma.guest.findMany({
+      where: { eventId, id: { in: uniqueGuestIds } },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        organization: true,
+        guestType: true,
+        tableNumber: true,
+        notes: true,
+        custom: true,
+        qrCode: true,
+        uniqueCode: true,
+        qrImageUrl: true,
+      },
+    }),
   ]);
   if (!event) throw { status: 404, message: "Event not found" };
   if (allTemplates.length === 0) throw { status: 404, message: "No card template found for this event" };
