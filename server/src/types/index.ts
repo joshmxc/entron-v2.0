@@ -22,7 +22,8 @@ export interface PaginatedResponse<T> {
 }
 
 export interface ScanPayload {
-  qrCode: string;
+  qrCode?: string;
+  uniqueCode?: string;
   eventId: string;
   deviceInfo?: string;
   offlineTimestamp?: string;

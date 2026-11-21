@@ -213,6 +213,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
               <th>Guest</th>
               <th>Phone</th>
               <th>Ticket</th>
+              <th>Unique ID</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -229,6 +230,16 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
                   <span className={`badge ${TYPE_COLORS[g.guestType as string] ?? "badge-blue"}`}>
                     {TYPE_LABELS[g.guestType as string] ?? g.guestType as string}
                   </span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(String(g.uniqueCode ?? ""))}
+                    className="font-mono text-sm text-entron-blue hover:underline"
+                    title="Copy unique ID"
+                  >
+                    {String(g.uniqueCode ?? "—")}
+                  </button>
                 </td>
                 <td>
                   {g.isCheckedIn ? (
@@ -281,6 +292,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-slate-200">{g.firstName as string} {g.lastName as string}</p>
                 <p className="text-xs text-slate-400">{(g.phone as string) ?? ""}</p>
+                <p className="mt-1 font-mono text-xs text-entron-blue">{String(g.uniqueCode ?? "—")}</p>
               </div>
               <span className={`badge ${TYPE_COLORS[g.guestType as string] ?? "badge-blue"}`}>
                 {TYPE_LABELS[g.guestType as string]}

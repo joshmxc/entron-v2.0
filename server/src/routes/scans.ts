@@ -17,9 +17,12 @@ router.use(async (req, res, next) => {
 });
 
 const scanSchema = z.object({
-  qrCode: z.string().uuid(),
+  qrCode: z.string().uuid().optional(),
+  uniqueCode: z.string().trim().min(4).max(20).optional(),
   eventId: z.string().uuid(),
   offlineTimestamp: z.string().datetime().optional(),
+}).refine((value) => Boolean(value.qrCode || value.uniqueCode), {
+  message: "QR code or unique ID is required",
 });
 
 const batchSchema = z.object({

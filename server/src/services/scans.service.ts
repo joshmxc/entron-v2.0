@@ -10,16 +10,27 @@ export async function processScan(
   staffId: string,
   deviceInfo?: string
 ): Promise<ScanResult> {
-  const guest = await prisma.guest.findUnique({
-    where: { qrCode: payload.qrCode },
-    include: { event: { select: { name: true } } },
-  });
-
+  const identifier = payload.uniqueCode
+    ? payload.uniqueCode.trim().toUpperCase().replace(/\s+/g, "")
+    : payload.qrCode;
+  if (!identifier) {
+    return { status: "INVALID_QR", message: "QR code or unique ID is required" };
+  }
+  const guest = payload.uniqueCode
+    ? await prisma.guest.findUnique({
+        where: { uniqueCode: identifier },
+        include: { event: { select: { name: true } } },
+      })
+    : await prisma.guest.findUnique({
+        where: { qrCode: identifier },
+        include: { event: { select: { name: true } } },
+      });
   if (!guest) {
-    const result: ScanResult = { status: "INVALID_QR", message: "QR code not found" };
+    const result: ScanResult = payload.uniqueCode
+      ? { status: "INVALID_QR", message: "Unique ID not found" }
+      : { status: "INVALID_QR", message: "QR code not found" };
     return result;
   }
-
   if (guest.eventId !== payload.eventId) {
     const result: ScanResult = { status: "WRONG_EVENT", message: "QR code belongs to a different event" };
     return result;

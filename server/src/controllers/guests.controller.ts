@@ -69,9 +69,10 @@ export async function exportList(req: Request, res: Response) {
     "Full Name": `${guest.firstName} ${guest.lastName}`.trim(),
     Phone: guest.phone ?? "",
     "Guest Type": guest.guestType,
+    "Unique ID": guest.uniqueCode,
   }));
   const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet([["Full Name", "Phone", "Guest Type"]]);
+  const worksheet = XLSX.utils.aoa_to_sheet([["Full Name", "Phone", "Guest Type", "Unique ID"]]);
   XLSX.utils.sheet_add_json(worksheet, rows, { skipHeader: true, origin: "A2" });
   XLSX.utils.book_append_sheet(workbook, worksheet, "Guests");
   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });

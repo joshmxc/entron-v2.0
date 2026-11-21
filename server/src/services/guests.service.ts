@@ -2,6 +2,25 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../lib/prisma";
 import { generateQRImage } from "../lib/qrcode";
 import { ImportOptions, parseGuestExcel, GuestRow } from "../lib/excel";
+import crypto from "crypto";
+
+function generateUniqueCode(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += alphabet[crypto.randomInt(alphabet.length)];
+  }
+  return `ENT-${code}`;
+}
+
+async function createUniqueCode(): Promise<string> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = generateUniqueCode();
+    const existing = await prisma.guest.findUnique({ where: { uniqueCode: code } }).catch(() => null);
+    if (!existing) return code;
+  }
+  throw new Error("Could not generate a unique guest code");
+}
 
 function admissionsForType(type: string, custom?: number): number {
   if (type === "SINGLE") return 1;
@@ -28,6 +47,7 @@ export async function createGuest(eventId: string, data: {
   const guestType = (data.guestType ?? "SINGLE") as "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
   const maxAdmissions = admissionsForType(guestType, data.maxAdmissions);
   const qrCode = uuidv4();
+  const uniqueCode = await createUniqueCode();
 
   const qrImageUrl = await generateQRImage(qrCode, eventId);
 
@@ -48,6 +68,7 @@ export async function createGuest(eventId: string, data: {
       validationWarnings: data.validationWarnings?.length ? data.validationWarnings : undefined,
       importBatchId: data.importBatchId,
       qrCode,
+      uniqueCode,
       qrImageUrl,
     },
   });
@@ -69,6 +90,7 @@ export async function listGuests(eventId: string, opts: {
       { firstName: { contains: opts.search, mode: "insensitive" } },
       { lastName: { contains: opts.search, mode: "insensitive" } },
       { phone: { contains: opts.search } },
+      { uniqueCode: { contains: opts.search, mode: "insensitive" } },
     ];
   }
   if (typeof opts.checkedIn === "boolean") where.isCheckedIn = opts.checkedIn;
@@ -96,6 +118,7 @@ export async function exportGuests(eventId: string) {
       lastName: true,
       phone: true,
       guestType: true,
+      uniqueCode: true,
     },
   });
 }

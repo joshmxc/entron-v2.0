@@ -1,5 +1,5 @@
 "use client";
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Camera } from "lucide-react";
 import { useScanner } from "@/hooks/useScanner";
@@ -7,12 +7,21 @@ import ScanResult from "@/components/scanner/ScanResult";
 
 export default function ScanPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = use(params);
-  const { videoRef, scannerState, result, startScanning, stopScanning } = useScanner(eventId);
+  const { videoRef, scannerState, result, startScanning, stopScanning, handleUniqueCode } = useScanner(eventId);
+  const [mode, setMode] = useState<"qr" | "code">("qr");
+  const [uniqueCode, setUniqueCode] = useState("");
 
   useEffect(() => {
-    startScanning();
+    if (mode === "qr") startScanning();
+    else stopScanning();
     return () => stopScanning();
-  }, []);
+  }, [mode]);
+
+  const submitUniqueCode = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!uniqueCode.trim()) return;
+    void handleUniqueCode(uniqueCode);
+  };
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col z-50">
@@ -29,6 +38,47 @@ export default function ScanPage({ params }: { params: Promise<{ eventId: string
           {scannerState === "IDLE" && "Imesimama"}
         </div>
       </div>
+
+      <div className="absolute top-20 left-1/2 z-20 flex -translate-x-1/2 rounded-xl border border-white/20 bg-black/70 p-1">
+        <button
+          type="button"
+          onClick={() => setMode("qr")}
+          className={`rounded-lg px-4 py-2 text-sm ${mode === "qr" ? "bg-entron-blue text-white" : "text-white/70"}`}
+        >
+          Scan QR
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("code")}
+          className={`rounded-lg px-4 py-2 text-sm ${mode === "code" ? "bg-entron-blue text-white" : "text-white/70"}`}
+        >
+          Enter Unique ID
+        </button>
+      </div>
+
+      {mode === "code" && (
+        <form
+          onSubmit={submitUniqueCode}
+          className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/95 px-6"
+        >
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-white/10 bg-slate-900 p-5">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-white">Verify Unique ID</h2>
+              <p className="mt-1 text-sm text-white/60">Enter the guest’s ENT- code</p>
+            </div>
+            <input
+              value={uniqueCode}
+              onChange={(event) => setUniqueCode(event.target.value.toUpperCase())}
+              placeholder="ENT-XXXXXX"
+              autoComplete="off"
+              className="w-full rounded-xl border border-white/20 bg-black/30 px-4 py-3 text-center text-xl font-semibold tracking-widest text-white"
+            />
+            <button type="submit" className="btn-primary btn-lg w-full">
+              Verify Guest
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Video feed */}
       <video

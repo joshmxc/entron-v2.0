@@ -3,7 +3,12 @@ import * as scansService from "../services/scans.service";
 
 export async function scan(req: Request, res: Response) {
   const result = await scansService.processScan(
-    { qrCode: req.body.qrCode, eventId: req.body.eventId, offlineTimestamp: req.body.offlineTimestamp },
+    {
+      qrCode: req.body.qrCode,
+      uniqueCode: req.body.uniqueCode,
+      eventId: req.body.eventId,
+      offlineTimestamp: req.body.offlineTimestamp,
+    },
     req.user!.sub,
     req.headers["user-agent"]
   );

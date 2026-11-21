@@ -68,6 +68,21 @@ export function useScanner(eventId: string) {
     }
   }, [eventId, showResult]);
 
+  const handleUniqueCode = useCallback(async (uniqueCode: string) => {
+    setState("PENDING");
+    try {
+      const normalized = uniqueCode.trim().toUpperCase();
+      const res = await api.post("/scans", { uniqueCode: normalized, eventId });
+      showResult(res.data.data as ScanResult);
+    } catch (err: unknown) {
+      const response = err as { response?: { data?: { error?: string } } };
+      showResult({
+        status: "INVALID_QR",
+        message: response.response?.data?.error || "Unique ID not found",
+      });
+    }
+  }, [eventId, showResult]);
+
   const startScanning = useCallback(async () => {
     if (!videoRef.current) return;
     setState("SCANNING");
@@ -142,5 +157,5 @@ export function useScanner(eventId: string) {
     }
   }, []);
 
-  return { videoRef, scannerState, result, startScanning, stopScanning };
+  return { videoRef, scannerState, result, startScanning, stopScanning, handleUniqueCode };
 }
