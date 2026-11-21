@@ -332,7 +332,11 @@ export async function testWhatsAppTemplate(
       ],
     },
     { headers: headers(), timeout: 15_000 }
-  );
+  ).catch((err) => {
+    const axErr = err as AxiosError;
+    const detail = axErr.response?.data ?? axErr.message;
+    throw new Error(`NextSMS WhatsApp test rejected: ${JSON.stringify(detail)}`);
+  });
 
   const msg = res.data?.messages?.[0];
   return {
