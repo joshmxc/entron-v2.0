@@ -2,6 +2,9 @@ import { prisma } from "../lib/prisma";
 import { isNextSmsConfigured, sendSMS } from "../lib/nextsms";
 import { ScanPayload, ScanResult } from "../types";
 
+const WELCOME_SMS_DELAY_MS = 15_000;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function processScan(
   payload: ScanPayload,
   staffId: string,
@@ -107,6 +110,7 @@ export async function processScan(
       `Tunafurahi kukukaribisha kwenye ${guest.event.name}. ` +
       `Umethibitishwa kuingia kwenye tukio.`;
     try {
+      await sleep(WELCOME_SMS_DELAY_MS);
       const sms = await sendSMS(guest.phone, body, "HARUSI");
       await prisma.outboundMessage.create({
         data: {
