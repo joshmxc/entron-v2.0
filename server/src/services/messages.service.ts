@@ -20,9 +20,11 @@ export async function sendBulkMessages(opts: {
   whatsappAccount?: string;
   whatsappTemplate?: string;
   whatsappMessageParameter?: string;
+  date?: string;
+  time?: string;
   sentBy: string;
 }) {
-  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, sentBy } = opts;
+  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, date, time, sentBy } = opts;
   const results = {
     sent: 0,
     failed: 0,
@@ -32,7 +34,7 @@ export async function sendBulkMessages(opts: {
   // Load all guests in one query
   const guests = await prisma.guest.findMany({
     where: { id: { in: guestIds } },
-    select: { id: true, firstName: true, lastName: true, phone: true },
+    select: { id: true, firstName: true, lastName: true, phone: true, invitations: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
 
   const withPhone = guests.filter((g) => g.phone);
@@ -105,7 +107,10 @@ export async function sendBulkMessages(opts: {
           body,
           whatsappAccount,
           whatsappTemplate,
-          whatsappMessageParameter
+          whatsappMessageParameter,
+          guest.invitations[0]?.cardUrl ?? undefined,
+          date,
+          time
         );
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", externalId, status: "SENT" },

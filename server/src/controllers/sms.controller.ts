@@ -222,12 +222,13 @@ export async function getBalance(_req: Request, res: Response): Promise<void> {
 }
 
 export async function testWhatsApp(req: Request, res: Response): Promise<void> {
-  const { phone, personalisation, account, template, parameter } = req.body as {
+  const { phone, personalisation, account, template, parameter, imageUrl } = req.body as {
     phone?: string;
     personalisation?: string;
     account?: string;
     template?: string;
     parameter?: string;
+    imageUrl?: string;
   };
 
   if (!phone || !personalisation) {
@@ -236,7 +237,7 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const data = await testWhatsAppTemplate(phone, personalisation, account, template, parameter);
+    const data = await testWhatsAppTemplate(phone, personalisation, account, template, parameter, imageUrl);
     res.json({ success: true, data });
   } catch (err) {
     res.status(502).json({

@@ -267,7 +267,10 @@ export async function sendWhatsAppMessage(
   text: string,
   account?: string,
   template?: string,
-  messageParameter?: string
+  messageParameter?: string,
+  imageUrl?: string,
+  date?: string,
+  time?: string
 ): Promise<string> {
   if (!isNextSmsWhatsAppConfigured()) {
     throw new Error(
@@ -280,16 +283,25 @@ export async function sendWhatsAppMessage(
     throw new Error("NextSMS WhatsApp requires a valid international phone number.");
   }
 
+  const payload: Record<string, unknown> = {
+    account: account || config.nextsms.whatsappAccount,
+    template: template || config.nextsms.whatsappTemplate,
+    to: [Number(destination)],
+    personalisation: [
+      { [messageParameter || config.nextsms.whatsappMessageParameter]: text },
+    ],
+  };
+  if (imageUrl) {
+    payload.header = { image: { file: imageUrl, name: "" } };
+  }
+  if (date && time) {
+    payload.date = date;
+    payload.time = time;
+  }
+
   const res = await axios.post(
     `${BASE_URL}/whatsapp/v2/text/single`,
-    {
-      account: account || config.nextsms.whatsappAccount,
-      template: template || config.nextsms.whatsappTemplate,
-      to: [Number(destination)],
-      personalisation: [
-        { [messageParameter || config.nextsms.whatsappMessageParameter]: text },
-      ],
-    },
+    payload,
     { headers: headers(), timeout: 15_000 }
   );
 
@@ -312,7 +324,8 @@ export async function testWhatsAppTemplate(
   personalisationValue: string,
   account?: string,
   template?: string,
-  messageParameter?: string
+  messageParameter?: string,
+  imageUrl?: string
 ): Promise<{ messageId: string; message: string }> {
   if (!isNextSmsWhatsAppConfigured()) {
     throw new Error(
@@ -321,16 +334,21 @@ export async function testWhatsAppTemplate(
   }
 
   const destination = normalizePhone(to);
+  const payload: Record<string, unknown> = {
+    account: account || config.nextsms.whatsappAccount,
+    template: template || config.nextsms.whatsappTemplate,
+    to: [Number(destination)],
+    personalisation: [
+      { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue },
+    ],
+  };
+  if (imageUrl) {
+    payload.header = { image: { file: imageUrl, name: "" } };
+  }
+
   const res = await axios.post(
     `${BASE_URL}/whatsapp/v2/test/text/single`,
-    {
-      account: account || config.nextsms.whatsappAccount,
-      template: template || config.nextsms.whatsappTemplate,
-      to: [Number(destination)],
-      personalisation: [
-        { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue },
-      ],
-    },
+    payload,
     { headers: headers(), timeout: 15_000 }
   ).catch((err) => {
     const axErr = err as AxiosError;

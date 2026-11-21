@@ -14,7 +14,7 @@ type Channel = "WHATSAPP" | "SMS" | "BOTH";
 type GuestType = "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
 
 interface Event { id: string; name: string }
-interface Guest { id: string; firstName: string; lastName: string; phone?: string; guestType: GuestType; eventId: string }
+interface Guest { id: string; firstName: string; lastName: string; phone?: string; guestType: GuestType; eventId: string; cardUrl?: string }
 interface Message { id: string; phone: string; body: string; channel: string; status: string; createdAt: string; sender: { name: string } }
 
 const TYPE_LABEL: Record<GuestType, string> = { SINGLE: "Single", DOUBLE: "Double", FAMILY: "Family", VIP: "VIP" };
@@ -80,6 +80,8 @@ export default function MessagesPage() {
   const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
   const [whatsappAccount, setWhatsappAccount] = useState("");
   const [whatsappTemplate, setWhatsappTemplate] = useState("");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleTime, setScheduleTime] = useState("");
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
   const activeWhatsappTemplate = whatsappTemplate || smsStatus?.whatsappTemplate || whatsappTemplates[0] || "";
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
@@ -99,6 +101,7 @@ export default function MessagesPage() {
         account: activeWhatsappAccount,
         template: activeWhatsappTemplate,
         parameter: smsStatus?.whatsappMessageParameter || "var1",
+        imageUrl: previewGuest?.cardUrl,
       });
       setWhatsappTestResult(res.data.data);
     } finally {
@@ -147,6 +150,8 @@ export default function MessagesPage() {
         whatsappAccount: channel === "SMS" ? undefined : activeWhatsappAccount,
         whatsappTemplate: channel === "SMS" ? undefined : activeWhatsappTemplate,
         whatsappMessageParameter: smsStatus?.whatsappMessageParameter || "var1",
+        date: scheduleDate || undefined,
+        time: scheduleTime || undefined,
       });
       setSendResult(res.data.data);
       await mutateHistory();
@@ -236,6 +241,14 @@ export default function MessagesPage() {
                   <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
                   <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Schedule Date</label>
+                  <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="w-full text-sm" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Schedule Time (EAT UTC+3)</label>
+                  <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="w-full text-sm" />
+                </div>
               </div>
             )}
           </div>
@@ -315,6 +328,13 @@ export default function MessagesPage() {
                   )}
                 </div>
                 <div className="mx-auto max-w-sm rounded-lg bg-[#1f2c27] border border-white/5 p-3 shadow-lg">
+                  {previewGuest?.cardUrl && (
+                    <img
+                      src={previewGuest.cardUrl}
+                      alt={`Invitation card for ${previewGuest.firstName} ${previewGuest.lastName}`}
+                      className="mb-3 max-h-64 w-full rounded-md object-contain"
+                    />
+                  )}
                   <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">
                     {whatsappPreviewBody}
                   </p>
