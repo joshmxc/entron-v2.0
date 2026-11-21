@@ -349,7 +349,7 @@ export default function MessagesPage() {
                   </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Template has no image header. The approved quick-reply buttons are included exactly as shown above.
+                  Image header uses this guest’s generated PNG/JPEG invitation card. The approved quick-reply buttons are included exactly as shown above.
                 </p>
                 {whatsappTestResult?.message && (
                   <p className="text-xs text-green-400">
