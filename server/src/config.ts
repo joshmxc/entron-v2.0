@@ -81,6 +81,7 @@ export const config = {
   // NextSMS API v2 (messaging-service.co.tz)
   nextsms: {
     apiToken: optional("NEXTSMS_API_TOKEN", ""),
+    baseUrl: optional("NEXTSMS_BASE_URL", "https://messaging-service.co.tz/api"),
     senderId: optional("NEXTSMS_SENDER_ID", "ENTRON"),
     whatsappAccount: optional("NEXTSMS_WHATSAPP_ACCOUNT", ""),
     whatsappTemplate: optional("NEXTSMS_WHATSAPP_TEMPLATE", ""),

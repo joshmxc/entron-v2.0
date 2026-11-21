@@ -21,7 +21,7 @@
 import axios, { AxiosError } from "axios";
 import { config } from "../config";
 
-const BASE_URL = "https://messaging-service.co.tz/api";
+const BASE_URL = config.nextsms.baseUrl.replace(/\/$/, "");
 
 // ── Phone normalisation ───────────────────────────────────────────────────────
 // Next SMS expects Tanzania international format: 255XXXXXXXXX
