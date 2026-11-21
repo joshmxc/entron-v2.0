@@ -1,5 +1,6 @@
 import { prisma } from "../lib/prisma";
 import { sendBulkSMS as nextSmsBulk, sendWhatsAppMessage, getSMSBalance } from "../lib/nextsms";
+import { generateCards } from "./invitations.service";
 
 const WHATSAPP_DELAY = 60; // ms between WhatsApp messages
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -101,7 +102,16 @@ export async function sendBulkMessages(opts: {
     for (const guest of withPhone) {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest.firstName, guest.lastName);
-      const cardUrl = guest.invitations[0]?.cardUrl;
+      let cardUrl = guest.invitations[0]?.cardUrl;
+      if (!cardUrl) {
+        await generateCards(opts.eventId, null, [guest.id]);
+        const invitation = await prisma.guestInvitation.findFirst({
+          where: { guestId: guest.id },
+          orderBy: { createdAt: "desc" },
+          select: { cardUrl: true },
+        });
+        cardUrl = invitation?.cardUrl;
+      }
       if (!cardUrl) {
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", status: "FAILED" },
