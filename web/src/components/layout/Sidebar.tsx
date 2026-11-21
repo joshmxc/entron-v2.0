@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, Users,
-  Mail, UserCog, Settings, LogOut,
+  LayoutDashboard, Calendar,
+  Palette, UserCog, Settings, LogOut,
   MessageSquare, Sun, Moon, ScanLine,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
@@ -14,8 +14,7 @@ import { useTheme } from "@/hooks/useTheme";
 const navItems = [
   { href: "/dashboard",   label: "Dashboard",    icon: LayoutDashboard },
   { href: "/events",      label: "Events",        icon: Calendar },
-  { href: "/guests",      label: "Guests",        icon: Users },
-  { href: "/invitations", label: "Invitations",   icon: Mail },
+  { href: "/invitations", label: "Card Design",   icon: Palette },
   { href: "/messages",    label: "Messages/SMS",  icon: MessageSquare },
   { href: "/staff",       label: "Staff",         icon: UserCog, adminOnly: true },
   { href: "/settings",    label: "Settings",      icon: Settings },

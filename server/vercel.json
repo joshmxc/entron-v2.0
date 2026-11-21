@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm ci --prefix ..",
+  "buildCommand": "npm --prefix .. run db:generate && npm --prefix .. run build --workspace=@entron/server",
+  "functions": {
+    "src/app.ts": {
+      "maxDuration": 300
+    }
+  }
+}

@@ -139,12 +139,17 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
             </div>
             {channel === "SMS" && (
               <p className="text-xs text-slate-500">
-                Uses Africa&apos;s Talking SMS. Make sure phone numbers include country code (e.g. 255...).
+                Uses the NextSMS standard SMS service.
+              </p>
+            )}
+            {channel === "WHATSAPP" && (
+              <p className="text-xs text-slate-500">
+                Uses your configured NextSMS WhatsApp account and approved template. The composed message fills its configured placeholder.
               </p>
             )}
             {channel === "BOTH" && (
               <p className="text-xs text-slate-500">
-                Each guest will receive both WhatsApp and SMS messages.
+                Each guest will receive both NextSMS WhatsApp (approved template) and SMS messages.
               </p>
             )}
           </div>
@@ -223,7 +228,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={"Write your message here...\n\nYou can use:\n{{name}} — full name\n{{firstName}} — first name\n{{lastName}} — last name"}
+                placeholder={"Write your message here...\n\nFor WhatsApp, this is inserted into the configured approved-template placeholder.\nYou can use:\n{{name}} — full name\n{{firstName}} — first name\n{{lastName}} — last name"}
                 rows={5}
                 className="text-sm w-full"
               />

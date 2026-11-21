@@ -4,11 +4,13 @@ dist/
 generated/
 uploads/
 .env
-.env.local
-.env*.local
+.env.*
+!.env.example
 *.log
 .DS_Store
+.vercel/
+*.pem
+*.key
 .claude/
 web/certificates/
 web/tsconfig.tsbuildinfo
-

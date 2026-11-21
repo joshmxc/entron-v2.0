@@ -6,17 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
 
 const schema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
+  name: z.string().trim().min(1, "Guest name is required"),
+  phone: z.string().trim().min(1, "Phone number is required"),
   guestType: z.enum(["SINGLE", "DOUBLE", "FAMILY", "VIP"]).default("SINGLE"),
-  maxAdmissions: z.coerce.number().int().min(1).optional(),
+  maxAdmissions: z.coerce.number().int().min(1, "Enter at least one admission"),
   tableNumber: z.string().optional(),
-  seatNumber: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -25,19 +23,37 @@ type FormData = z.infer<typeof schema>;
 export default function NewGuestPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = use(params);
   const router = useRouter();
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const [submitError, setSubmitError] = useState("");
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { guestType: "SINGLE" },
+    defaultValues: { guestType: "SINGLE", maxAdmissions: 1 },
   });
 
   const guestType = watch("guestType");
 
+  useEffect(() => {
+    if (guestType !== "FAMILY") {
+      setValue("maxAdmissions", guestType === "DOUBLE" ? 2 : 1, { shouldValidate: true });
+    }
+  }, [guestType, setValue]);
+
   const onSubmit = async (data: FormData) => {
-    await api.post(`/events/${eventId}/guests`, {
-      ...data,
-      maxAdmissions: guestType === "SINGLE" ? 1 : guestType === "DOUBLE" ? 2 : data.maxAdmissions,
-    });
-    router.push(`/events/${eventId}/guests`);
+    setSubmitError("");
+    const [firstName, ...lastNameParts] = data.name.trim().split(/\s+/);
+    try {
+      await api.post(`/events/${eventId}/guests`, {
+        firstName,
+        lastName: lastNameParts.join(" "),
+        phone: data.phone,
+        guestType: data.guestType,
+        maxAdmissions: data.maxAdmissions,
+        tableNumber: data.tableNumber,
+        notes: data.notes,
+      });
+      router.push(`/events/${eventId}/guests`);
+    } catch {
+      setSubmitError("Could not add the guest. Please check the details and try again.");
+    }
   };
 
   return (
@@ -50,31 +66,20 @@ export default function NewGuestPage({ params }: { params: Promise<{ eventId: st
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="card space-y-4">
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="input-group">
-            <label>First Name *</label>
-            <input {...register("firstName")} placeholder="John" />
-            {errors.firstName && <p className="text-red-400 text-xs">{errors.firstName.message}</p>}
-          </div>
-          <div className="input-group">
-            <label>Last Name *</label>
-            <input {...register("lastName")} placeholder="Smith" />
-            {errors.lastName && <p className="text-red-400 text-xs">{errors.lastName.message}</p>}
-          </div>
+        {submitError && <p role="alert" className="text-red-400 text-sm">{submitError}</p>}
+        <div className="input-group">
+          <label>Full Name *</label>
+          <input {...register("name")} placeholder="Jane Doe" autoComplete="name" />
+          {errors.name && <p className="text-red-400 text-xs">{errors.name.message}</p>}
+          <p className="text-xs text-slate-500">Add one guest per submission.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="input-group">
-            <label>Phone Number</label>
+            <label>Phone Number *</label>
             <input {...register("phone")} type="tel" placeholder="0700 000 000" />
+            {errors.phone && <p className="text-red-400 text-xs">{errors.phone.message}</p>}
           </div>
-          <div className="input-group">
-            <label>Email</label>
-            <input {...register("email")} type="email" placeholder="john@example.com" />
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
           <div className="input-group">
             <label>Ticket Type</label>
             <select {...register("guestType")}>
@@ -84,27 +89,27 @@ export default function NewGuestPage({ params }: { params: Promise<{ eventId: st
               <option value="VIP">VIP</option>
             </select>
           </div>
-          {guestType === "FAMILY" && (
-            <div className="input-group">
-              <label>Number of People</label>
-              <input {...register("maxAdmissions")} type="number" min={1} placeholder="4" />
-            </div>
-          )}
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
           <div className="input-group">
-            <label>Table Number</label>
-            <input {...register("tableNumber")} placeholder="A1" />
-          </div>
-          <div className="input-group">
-            <label>Seat Number</label>
-            <input {...register("seatNumber")} placeholder="5" />
+            <label>Max Admissions *</label>
+            <input
+              {...register("maxAdmissions")}
+              type="number"
+              min={1}
+              readOnly={guestType !== "FAMILY"}
+              className={guestType !== "FAMILY" ? "opacity-70" : ""}
+            />
+            {errors.maxAdmissions && <p className="text-red-400 text-xs">{errors.maxAdmissions.message}</p>}
+            <p className="text-xs text-slate-500">Set by ticket type except for Family.</p>
           </div>
         </div>
 
         <div className="input-group">
-          <label>Notes</label>
+          <label>Table Number (optional)</label>
+          <input {...register("tableNumber")} placeholder="A1" />
+        </div>
+
+        <div className="input-group">
+          <label>Note (optional)</label>
           <textarea {...register("notes")} rows={2} placeholder="Additional notes..." />
         </div>
 

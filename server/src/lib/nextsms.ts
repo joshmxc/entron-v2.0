@@ -1,11 +1,12 @@
 /**
- * Next SMS Service  (messaging-service.co.tz)
- * API docs: https://documenter.getpostman.com/view/1679195/2sAYkDP1XN
+ * NextSMS API v2 (messaging-service.co.tz)
  *
  * Credentials are read from environment variables:
- *   NEXTSMS_USERNAME  — your Next SMS account username
- *   NEXTSMS_PASSWORD  — your Next SMS account password
- *   NEXTSMS_SENDER_ID — your registered sender name (e.g. "ENTRON")
+ *   NEXTSMS_API_TOKEN       — API bearer token
+ *   NEXTSMS_SENDER_ID       — approved SMS sender name
+ *   NEXTSMS_WHATSAPP_ACCOUNT — active WhatsApp account name
+ *   NEXTSMS_WHATSAPP_TEMPLATE — active approved WhatsApp template
+ *   NEXTSMS_WHATSAPP_MESSAGE_PARAMETER — template placeholder for composed message
  *
  * When credentials are missing the service logs and returns a SIMULATED result
  * so the rest of the application keeps working during development.
@@ -20,7 +21,7 @@
 import axios, { AxiosError } from "axios";
 import { config } from "../config";
 
-const BASE_URL = "https://messaging-service.co.tz";
+const BASE_URL = "https://messaging-service.co.tz/api";
 
 // ── Phone normalisation ───────────────────────────────────────────────────────
 // Next SMS expects Tanzania international format: 255XXXXXXXXX
@@ -38,17 +39,9 @@ export function normalizePhone(phone: string): string {
   return digits;
 }
 
-// ── Auth header ───────────────────────────────────────────────────────────────
-function authHeader(): string {
-  const encoded = Buffer.from(
-    `${config.nextsms.username}:${config.nextsms.password}`
-  ).toString("base64");
-  return `Basic ${encoded}`;
-}
-
 function headers() {
   return {
-    Authorization: authHeader(),
+    Authorization: `Bearer ${config.nextsms.apiToken}`,
     "Content-Type": "application/json",
     Accept: "application/json",
   };
@@ -56,7 +49,15 @@ function headers() {
 
 // ── Configuration guard ───────────────────────────────────────────────────────
 export function isNextSmsConfigured(): boolean {
-  return !!(config.nextsms.username && config.nextsms.password);
+  return !!config.nextsms.apiToken;
+}
+
+export function isNextSmsWhatsAppConfigured(): boolean {
+  return !!(
+    config.nextsms.apiToken &&
+    config.nextsms.whatsappAccount &&
+    config.nextsms.whatsappTemplate
+  );
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -86,33 +87,41 @@ export async function sendSMS(to: string, text: string): Promise<SMSResult> {
 
   // Simulate when credentials are not configured
   if (!isNextSmsConfigured()) {
-    console.log(`[NextSMS SIMULATED] To: ${dest} | ${text}`);
+    console.log("[NextSMS SIMULATED] SMS skipped because the API token is not configured.");
     return { to, dest, messageId: `sim_${Date.now()}`, status: "SIMULATED" };
   }
 
   const payload = {
     from: config.nextsms.senderId,
-    to:   dest,
+    to:   [dest],
     text,
   };
 
   try {
     const res = await axios.post(
-      `${BASE_URL}/api/sms/v1/text/single`,
+      `${BASE_URL}/sms/v2/text/single`,
       payload,
       { headers: headers(), timeout: 15_000 }
     );
 
     // Next SMS returns { messages: [{ to, messageId, status: { name, groupName } }] }
     const msg = res.data?.messages?.[0];
-    const groupName: string = msg?.status?.groupName ?? "";
-    const statusName: string = msg?.status?.name ?? "";
-    const failed = groupName === "REJECTED" || statusName.includes("FAILED");
-    const messageId = String(msg?.messageId ?? Date.now());
+    const groupName = String(msg?.status?.groupName ?? "").toUpperCase();
+    const statusName = String(msg?.status?.name ?? "").toUpperCase();
+    const messageId = msg?.messageId === undefined || msg?.messageId === null
+      ? ""
+      : String(msg.messageId);
+    const failed =
+      !msg ||
+      !messageId ||
+      groupName === "REJECTED" ||
+      statusName.includes("FAILED") ||
+      statusName.includes("REJECTED");
 
     if (failed) {
-      console.error(`[NextSMS] SMS rejected for ${dest}: ${statusName}`);
-      return { to, dest, messageId, status: "FAILED", error: statusName };
+      const error = statusName || "No valid message result returned by NextSMS";
+      console.error(`[NextSMS] SMS rejected for ${dest}: ${error}`);
+      return { to, dest, messageId, status: "FAILED", error };
     }
 
     console.log(`[NextSMS] SMS sent to ${dest}, messageId=${messageId}`);
@@ -146,10 +155,10 @@ export async function sendBulkSMS(
   if (!isNextSmsConfigured()) {
     const results: SMSResult[] = messages.map((m, i) => {
       const dest = normalizePhone(m.to);
-      console.log(`[NextSMS SIMULATED] To: ${dest} | ${m.text}`);
+      console.log("[NextSMS SIMULATED] SMS skipped because the API token is not configured.");
       return { to: m.to, dest, messageId: `sim_${Date.now()}_${i}`, status: "SIMULATED" };
     });
-    return { sent: results.length, failed: 0, results };
+    return { sent: 0, failed: 0, results };
   }
 
   const payload: Record<string, unknown> = {
@@ -158,13 +167,12 @@ export async function sendBulkSMS(
       to:   normalizePhone(m.to),
       text: m.text,
     })),
-    flash: 0,
     ...(reference ? { reference } : {}),
   };
 
   try {
     const res = await axios.post(
-      `${BASE_URL}/api/sms/v2/text/multi`,
+      `${BASE_URL}/sms/v2/text/multi`,
       payload,
       { headers: headers(), timeout: 30_000 }
     );
@@ -179,19 +187,24 @@ export async function sendBulkSMS(
     const results: SMSResult[] = messages.map((m, i) => {
       const dest = normalizePhone(m.to);
       const r = raw[i];
-      if (!r) return { to: m.to, dest, messageId: "", status: "FAILED", error: "No API response for this recipient" };
+      if (!r || r.messageId === undefined || r.messageId === null) {
+        return { to: m.to, dest, messageId: "", status: "FAILED", error: "No valid API response for this recipient" };
+      }
 
+      const groupName = String(r.status?.groupName ?? "").toUpperCase();
+      const statusName = String(r.status?.name ?? "").toUpperCase();
       const failed =
-        r.status?.groupName === "REJECTED" ||
-        r.status?.name?.includes("FAIL") ||
-        r.status?.name?.includes("REJECTED");
+        (!groupName && !statusName) ||
+        groupName === "REJECTED" ||
+        statusName.includes("FAIL") ||
+        statusName.includes("REJECTED");
 
       return {
         to: m.to,
         dest,
         messageId: String(r.messageId),
         status: failed ? "FAILED" : "SENT",
-        ...(failed ? { error: r.status?.name } : {}),
+        ...(failed ? { error: statusName || "No message status returned" } : {}),
       };
     });
 
@@ -232,7 +245,7 @@ export async function getSMSBalance(): Promise<{
   }
 
   try {
-    const res = await axios.get(`${BASE_URL}/api/v2/balance`, {
+    const res = await axios.get(`${BASE_URL}/v2/balance`, {
       headers: headers(),
       timeout: 10_000,
     });
@@ -246,4 +259,43 @@ export async function getSMSBalance(): Promise<{
     console.error("[NextSMS] Balance check failed:", (err as AxiosError).message);
     return { balance: 0, display: "Error fetching balance", channel: "—" };
   }
+}
+
+export async function sendWhatsAppMessage(to: string, text: string): Promise<string> {
+  if (!isNextSmsWhatsAppConfigured()) {
+    throw new Error(
+      "NextSMS WhatsApp requires an API token, active WhatsApp account, and approved template."
+    );
+  }
+
+  const destination = normalizePhone(to);
+  if (!/^\d+$/.test(destination) || !Number.isSafeInteger(Number(destination))) {
+    throw new Error("NextSMS WhatsApp requires a valid international phone number.");
+  }
+
+  const res = await axios.post(
+    `${BASE_URL}/whatsapp/v2/text/single`,
+    {
+      account: config.nextsms.whatsappAccount,
+      template: config.nextsms.whatsappTemplate,
+      to: [Number(destination)],
+      personalisation: [
+        { [config.nextsms.whatsappMessageParameter]: text },
+      ],
+    },
+    { headers: headers(), timeout: 15_000 }
+  );
+
+  const msg = res.data?.messages?.[0];
+  const groupName = String(msg?.status?.groupName ?? "").toUpperCase();
+  const statusName = String(msg?.status?.name ?? "").toUpperCase();
+  if (!msg || groupName === "REJECTED" || statusName.includes("FAIL") || statusName.includes("REJECTED")) {
+    throw new Error(`NextSMS WhatsApp rejected the message: ${statusName || "No message status returned"}`);
+  }
+
+  if (msg.messageId === undefined || msg.messageId === null) {
+    throw new Error("NextSMS WhatsApp response did not include a message ID.");
+  }
+
+  return String(msg.messageId);
 }

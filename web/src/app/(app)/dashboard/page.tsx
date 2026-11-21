@@ -1,13 +1,11 @@
 "use client";
-import { useEffect } from "react";
 import useSWR from "swr";
 import Link from "next/link";
-import { Users, CheckCircle, QrCode, TrendingUp, AlertCircle, ScanLine, ArrowUpRight, Clock } from "lucide-react";
+import { Users, CheckCircle, QrCode, TrendingUp, AlertCircle, ScanLine, ArrowUpRight, Palette } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
 import { useScanStore } from "@/store/scanStore";
 import { useEventStore } from "@/store/eventStore";
-import { useSocket, joinDashboard, joinStaffRoom } from "@/hooks/useSocket";
 import { formatDate } from "@/lib/utils";
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip } from "chart.js";
 import { Line } from "react-chartjs-2";
@@ -44,21 +42,20 @@ function StatCard({ label, value, sub, icon: Icon, iconBg, trend }: {
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { activeEvent } = useEventStore();
-  const { recentScans, totalToday, validToday, invalidToday, addLiveScan } = useScanStore();
-  const socket = useSocket();
+  const { recentScans, totalToday, validToday, invalidToday } = useScanStore();
   const isAdmin = user?.role === "ADMIN";
 
   const { data: stats } = useSWR(
     activeEvent ? `/dashboard/${isAdmin ? "admin" : "staff"}?eventId=${activeEvent.id}` : null,
-    fetcher, { refreshInterval: 30000 }
+    fetcher, { refreshInterval: 5000 }
   );
 
-  useEffect(() => {
-    if (!socket) return;
-    if (isAdmin) joinDashboard(); else joinStaffRoom();
-    socket.on("scan:new", (data) => { addLiveScan({ status: data.status, message: data.message ?? "", guest: data.guest, timestamp: data.timestamp, staffName: data.staffName }); });
-    return () => { socket.off("scan:new"); };
-  }, [socket, isAdmin]);
+  const { data: scansResult } = useSWR(
+    activeEvent ? `/scans?eventId=${activeEvent.id}&pageSize=6` : null,
+    fetcher,
+    { refreshInterval: 5000 }
+  );
+  const dashboardScans = scansResult?.data ?? recentScans;
 
   const eventData = stats?.data?.event ?? stats?.data;
   const total = eventData?.totalGuests ?? 0;
@@ -137,7 +134,7 @@ export default function DashboardPage() {
             </h3>
             <Link href="/guests" className="text-xs text-entron-blue font-medium hover:underline">View all →</Link>
           </div>
-          {recentScans.length === 0 ? (
+          {dashboardScans.length === 0 ? (
             <div className="py-10 text-center">
               <QrCode className="w-10 h-10 mx-auto mb-3" style={{ color: "var(--text-faint)" }} />
               <p className="text-sm" style={{ color: "var(--text-muted)" }}>No scans yet</p>
@@ -156,11 +153,11 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentScans.slice(0, 6).map((scan, i) => (
+                  {dashboardScans.slice(0, 6).map((scan: Record<string, unknown>, i: number) => (
                     <tr key={i} style={{ borderTop: "1px solid var(--border)" }}>
-                      <td className="px-4 py-3 text-xs font-mono" style={{ color: "var(--text-muted)", backgroundColor: "var(--surface)" }}>{scan.timestamp ? formatDate(scan.timestamp, "HH:mm:ss") : "—"}</td>
-                      <td className="px-4 py-3 font-medium" style={{ color: "var(--text)", backgroundColor: "var(--surface)" }}>{scan.guest ? `${scan.guest.firstName} ${scan.guest.lastName}` : "—"}</td>
-                      <td className="px-4 py-3" style={{ backgroundColor: "var(--surface)" }}><span className="badge badge-blue">{(scan.guest as Record<string, unknown>)?.guestType as string ?? "Guest"}</span></td>
+                      <td className="px-4 py-3 text-xs font-mono" style={{ color: "var(--text-muted)", backgroundColor: "var(--surface)" }}>{(scan.createdAt ?? scan.timestamp) ? formatDate(String(scan.createdAt ?? scan.timestamp), "HH:mm:ss") : "—"}</td>
+                      <td className="px-4 py-3 font-medium" style={{ color: "var(--text)", backgroundColor: "var(--surface)" }}>{scan.guest ? `${(scan.guest as Record<string, unknown>).firstName} ${(scan.guest as Record<string, unknown>).lastName}` : "—"}</td>
+                      <td className="px-4 py-3" style={{ backgroundColor: "var(--surface)" }}><span className="badge badge-blue">{((scan.guest as Record<string, unknown> | undefined)?.guestType as string) ?? "Guest"}</span></td>
                       <td className="px-4 py-3" style={{ backgroundColor: "var(--surface)" }}><span className={`badge ${scan.status === "SUCCESS" ? "badge-green" : "badge-red"}`}>{scan.status === "SUCCESS" ? "Valid" : "Invalid"}</span></td>
                     </tr>
                   ))}
@@ -215,7 +212,7 @@ export default function DashboardPage() {
             <p className="font-semibold text-sm mb-2" style={{ color: "var(--text)" }}>Quick Links</p>
             {[
               { href: "/guests", icon: Users, label: "Guests" },
-              { href: "/invitations", icon: Clock, label: "Invitations" },
+              { href: "/invitations", icon: Palette, label: "Card Design" },
               { href: "/messages", icon: TrendingUp, label: "Messages" },
             ].map(({ href, icon: Icon, label }) => (
               <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors" style={{ backgroundColor: "var(--surface-2)" }}>

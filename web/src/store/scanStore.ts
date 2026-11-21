@@ -24,7 +24,6 @@ interface ScanState {
   validToday: number;
   invalidToday: number;
   setResult: (result: ScanResult) => void;
-  addLiveScan: (scan: ScanResult) => void;
   clearResult: () => void;
 }
 
@@ -41,10 +40,6 @@ export const useScanStore = create<ScanState>((set) => ({
       totalToday: state.totalToday + 1,
       validToday: result.status === "SUCCESS" ? state.validToday + 1 : state.validToday,
       invalidToday: result.status !== "SUCCESS" ? state.invalidToday + 1 : state.invalidToday,
-    })),
-  addLiveScan: (scan) =>
-    set((state) => ({
-      recentScans: [scan, ...state.recentScans].slice(0, 50),
     })),
   clearResult: () => set({ lastResult: null }),
 }));

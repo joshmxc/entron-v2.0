@@ -1,11 +1,9 @@
 import archiver from "archiver";
-import fs from "fs";
-import path from "path";
 import { Response } from "express";
 
 export function streamZipToResponse(
   res: Response,
-  files: Array<{ filePath: string; name: string }>,
+  files: Array<{ read: () => Promise<Buffer>; name: string }>,
   zipName: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -17,12 +15,16 @@ export function streamZipToResponse(
     archive.on("end", resolve);
     archive.pipe(res);
 
-    for (const { filePath, name } of files) {
-      if (fs.existsSync(filePath)) {
-        archive.file(filePath, { name: path.basename(name) });
+    void (async () => {
+      try {
+        for (const { read, name } of files) {
+          archive.append(await read(), { name });
+        }
+        await archive.finalize();
+      } catch (error) {
+        archive.destroy();
+        reject(error);
       }
-    }
-
-    archive.finalize();
+    })();
   });
 }

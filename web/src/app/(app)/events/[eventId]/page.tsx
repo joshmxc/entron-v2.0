@@ -2,17 +2,19 @@
 import { use } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { Users, QrCode, TrendingUp, CheckCircle, Scan, Mail, ArrowLeft, MessageSquare } from "lucide-react";
+import { Users, QrCode, TrendingUp, CheckCircle, Scan, Palette, ArrowLeft, MessageSquare } from "lucide-react";
 import api from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useEventStore } from "@/store/eventStore";
 import { useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
 
 export default function EventPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = use(params);
   const { setActiveEvent } = useEventStore();
+  const { user } = useAuthStore();
 
   const { data: eventData } = useSWR(`/events/${eventId}`, fetcher);
   const { data: statsData } = useSWR(`/events/${eventId}/stats`, fetcher, { refreshInterval: 15000 });
@@ -40,6 +42,11 @@ export default function EventPage({ params }: { params: Promise<{ eventId: strin
           <h1 className="page-title truncate">{event.name}</h1>
           <p className="text-sm text-slate-400">{event.venue} · {formatDate(event.startDate, "dd MMM yyyy")}</p>
         </div>
+        {user?.role === "ADMIN" && (
+          <Link href={`/events/${eventId}/edit`} className="btn-secondary">
+            Edit Event
+          </Link>
+        )}
       </div>
 
       {/* Attendance bar */}
@@ -89,8 +96,8 @@ export default function EventPage({ params }: { params: Promise<{ eventId: strin
           <p className="font-medium text-slate-200">Scan</p>
         </Link>
         <Link href={`/events/${eventId}/invitations`} className="card hover:border-entron-blue/50 transition-all text-center py-6">
-          <Mail className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-          <p className="font-medium text-slate-200">Invitations</p>
+          <Palette className="w-8 h-8 text-purple-400 mx-auto mb-2" />
+          <p className="font-medium text-slate-200">Card Design</p>
         </Link>
         <Link href={`/events/${eventId}/messages`} className="card hover:border-entron-blue/50 transition-all text-center py-6">
           <MessageSquare className="w-8 h-8 text-blue-400 mx-auto mb-2" />

@@ -2,7 +2,6 @@ import { Router } from "express";
 import { z } from "zod";
 import { authenticate, requireAdmin, requireStaff } from "../middleware/auth";
 import { validateBody } from "../middleware/validate";
-import { uploadBanner } from "../middleware/upload";
 import * as ctrl from "../controllers/events.controller";
 
 const router = Router();
@@ -18,11 +17,20 @@ const createSchema = z.object({
   endDate: z.string().datetime().optional(),
 });
 
+const updateSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  venue: z.string().min(1).optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
 router.get("/", requireStaff, ctrl.list);
 router.get("/:id", requireStaff, ctrl.get);
 router.get("/:id/stats", requireStaff, ctrl.stats);
-router.post("/", requireAdmin, uploadBanner.single("banner"), validateBody(createSchema), ctrl.create);
-router.patch("/:id", requireAdmin, ctrl.update);
+router.post("/", requireAdmin, validateBody(createSchema), ctrl.create);
+router.patch("/:id", requireAdmin, validateBody(updateSchema), ctrl.update);
 router.delete("/:id", requireAdmin, ctrl.remove);
 
 export default router;

@@ -1,14 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, QrCode, Mail, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Calendar, QrCode, Palette, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/dashboard",   label: "Home",     icon: LayoutDashboard },
   { href: "/events",      label: "Events",   icon: Calendar },
   { href: "/scanner",     label: "Scan",     icon: QrCode, highlight: true },
-  { href: "/invitations", label: "Invites",  icon: Mail },
+  { href: "/invitations", label: "Cards",    icon: Palette },
   { href: "/messages",    label: "Messages", icon: MessageSquare },
 ];
 

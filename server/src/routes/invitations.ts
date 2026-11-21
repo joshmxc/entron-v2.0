@@ -12,6 +12,7 @@ router.use(authenticate, requireStaff);
 
 router.get("/", ctrl.listInvitations);
 router.get("/templates", ctrl.listTemplates);
+router.post("/templates/upload-url", requireAdmin, ctrl.createTemplateUploadUrl);
 router.post("/templates", requireAdmin, uploadTemplate.single("file"), ctrl.uploadTemplate);
 router.patch("/templates/:templateId", requireAdmin, ctrl.updateTemplate);
 router.delete("/templates/:templateId", requireAdmin, ctrl.deleteTemplate);

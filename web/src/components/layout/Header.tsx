@@ -12,7 +12,7 @@ const pageTitles: Record<string, string> = {
   "/dashboard":   "Dashboard",
   "/events":      "Events",
   "/guests":      "Guests",
-  "/invitations": "Invitations",
+  "/invitations": "Card Design",
   "/messages":    "Messages/SMS",
   "/staff":       "Staff",
   "/settings":    "Settings",
@@ -50,7 +50,10 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const title = Object.entries(pageTitles).find(([k]) => pathname.startsWith(k))?.[1] ?? "Entron";
+  const isEventCardDesign = /^\/events\/[^/]+\/invitations(?:\/|$)/.test(pathname);
+  const title = isEventCardDesign
+    ? "Card Design"
+    : Object.entries(pageTitles).find(([k]) => pathname.startsWith(k))?.[1] ?? "Entron";
   const unreadCount = recentScans.length - lastSeenCount;
 
   const handleLogout = async () => {

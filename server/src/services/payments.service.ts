@@ -3,7 +3,6 @@ import { prisma } from "../lib/prisma";
 import { stkPush as mpesaPush } from "../lib/mpesa";
 import { initiatePayment as airtelPay } from "../lib/airtel";
 import { initiatePayment as tigoPay } from "../lib/tigopesa";
-import { emitPaymentUpdate } from "../lib/socket";
 
 export async function initiatePayment(data: {
   eventId: string;
@@ -48,7 +47,6 @@ export async function initiatePayment(data: {
           where: { id: paymentId },
           data: { status: "COMPLETED", providerRef: result.transactionId, externalRef },
         });
-        emitPaymentUpdate(data.eventId, { ...payment, status: "COMPLETED" });
         return { payment: { ...payment, status: "COMPLETED" }, checkoutId: externalRef };
       }
     }
@@ -84,7 +82,6 @@ export async function handleMpesaCallback(body: Record<string, unknown>) {
     data: { status, providerRef: receipt ?? null, callbackPayload: body as object },
   });
 
-  emitPaymentUpdate(payment.eventId, { id: payment.id, status, providerRef: receipt });
 }
 
 export async function handleAirtelCallback(body: Record<string, unknown>) {
@@ -100,7 +97,6 @@ export async function handleAirtelCallback(body: Record<string, unknown>) {
     data: { status, providerRef: txn.airtel_money_id as string, callbackPayload: body as object },
   });
 
-  emitPaymentUpdate(payment.eventId, { id: payment.id, status });
 }
 
 export async function listPayments(eventId: string, page = 1, pageSize = 50) {

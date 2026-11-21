@@ -8,47 +8,26 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const passwordHash = await bcrypt.hash("Admin@1234", 12);
+  const adminPhone = process.env.SEED_ADMIN_PHONE;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPhone || !adminPassword || adminPassword.length < 6) {
+    throw new Error("Set SEED_ADMIN_PHONE and a SEED_ADMIN_PASSWORD of at least 6 characters before seeding");
+  }
+  const adminName = process.env.SEED_ADMIN_NAME || "Admin";
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   const admin = await prisma.user.upsert({
-    where: { phone: "0700000000" },
+    where: { phone: adminPhone },
     update: {},
     create: {
-      name: "Admin",
-      phone: "0700000000",
+      name: adminName,
+      phone: adminPhone,
       passwordHash,
       role: "ADMIN",
     },
   });
 
-  const staff = await prisma.user.upsert({
-    where: { phone: "0711111111" },
-    update: {},
-    create: {
-      name: "Staff Member",
-      phone: "0711111111",
-      passwordHash: await bcrypt.hash("Staff@1234", 12),
-      role: "STAFF",
-    },
-  });
-
-  const event = await prisma.event.upsert({
-    where: { id: "00000000-0000-0000-0000-000000000001" },
-    update: {},
-    create: {
-      id: "00000000-0000-0000-0000-000000000001",
-      name: "Harusi ya Amani na Baraka",
-      nameSwahili: "Harusi ya Amani na Baraka",
-      venue: "Mlimani City Hall, Dar es Salaam",
-      venueSwahili: "Ukumbi wa Mlimani City, Dar es Salaam",
-      startDate: new Date("2026-06-15T15:00:00Z"),
-      description: "Sample wedding event",
-    },
-  });
-
-  console.log("✓ Seeded admin:", admin.phone, "/ Admin@1234");
-  console.log("✓ Seeded staff:", staff.phone, "/ Staff@1234");
-  console.log("✓ Seeded event:", event.name);
+  console.log("Seeded admin account for", admin.phone);
 }
 
 main()

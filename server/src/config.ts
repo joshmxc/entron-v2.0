@@ -13,19 +13,40 @@ function optional(key: string, fallback = ""): string {
   return process.env[key] ?? fallback;
 }
 
+const nodeEnv = optional("NODE_ENV", "development");
+const jwtSecret = optional("JWT_SECRET", "dev-secret-change-me");
+const jwtRefreshSecret = optional("JWT_REFRESH_SECRET", "dev-refresh-secret-change-me");
+const storageType = optional("STORAGE_TYPE", "local");
+
+if (nodeEnv === "production") {
+  if (jwtSecret.length < 32 || jwtSecret === "dev-secret-change-me") {
+    throw new Error("JWT_SECRET must be set to a unique value of at least 32 characters in production");
+  }
+  if (jwtRefreshSecret.length < 32 || jwtRefreshSecret === "dev-refresh-secret-change-me") {
+    throw new Error("JWT_REFRESH_SECRET must be set to a unique value of at least 32 characters in production");
+  }
+}
+if (storageType !== "local" && storageType !== "supabase") {
+  throw new Error("STORAGE_TYPE must be either local or supabase");
+}
+
 export const config = {
-  nodeEnv: optional("NODE_ENV", "development"),
+  nodeEnv,
   port: parseInt(optional("SERVER_PORT", "4000"), 10),
   origin: optional("SERVER_ORIGIN", "http://localhost:3000"),
+  corsOrigins: optional("CORS_ORIGINS")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
 
   db: {
     url: required("DATABASE_URL"),
   },
 
   jwt: {
-    secret: optional("JWT_SECRET", "dev-secret-change-me"),
+    secret: jwtSecret,
     expiresIn: optional("JWT_EXPIRES_IN", "15m"),
-    refreshSecret: optional("JWT_REFRESH_SECRET", "dev-refresh-secret-change-me"),
+    refreshSecret: jwtRefreshSecret,
     refreshExpiresIn: optional("JWT_REFRESH_EXPIRES_IN", "7d"),
   },
 
@@ -57,16 +78,21 @@ export const config = {
     callbackUrl: optional("TIGO_CALLBACK_URL"),
   },
 
-  // Next SMS (messaging-service.co.tz)
-  // Credentials from: https://nextsms.co.tz → My Account → API
+  // NextSMS API v2 (messaging-service.co.tz)
   nextsms: {
-    username: optional("NEXTSMS_USERNAME", ""),
-    password: optional("NEXTSMS_PASSWORD", ""),
+    apiToken: optional("NEXTSMS_API_TOKEN", ""),
     senderId: optional("NEXTSMS_SENDER_ID", "ENTRON"),
+    whatsappAccount: optional("NEXTSMS_WHATSAPP_ACCOUNT", ""),
+    whatsappTemplate: optional("NEXTSMS_WHATSAPP_TEMPLATE", ""),
+    whatsappMessageParameter: optional("NEXTSMS_WHATSAPP_MESSAGE_PARAMETER", "message"),
   },
 
   storage: {
-    type: optional("STORAGE_TYPE", "local") as "local" | "s3",
+    type: storageType,
     uploadDir: optional("UPLOAD_DIR", "./uploads"),
+    supabaseUrl: optional("SUPABASE_URL"),
+    supabaseServiceRoleKey: optional("SUPABASE_SERVICE_ROLE_KEY"),
+    publicBucket: optional("SUPABASE_PUBLIC_BUCKET", "entron-public"),
+    privateBucket: optional("SUPABASE_PRIVATE_BUCKET", "entron-private"),
   },
 } as const;

@@ -13,20 +13,22 @@ import { generalLimiter } from "./middleware/rateLimiter";
 
 export function createApp() {
   const app = express();
+  const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://192.168.1.100:3000",
+    "http://192.168.1.100:3001",
+    "http://192.168.1.100:3002",
+    "https://localhost:3000",
+    "https://192.168.1.100:3000",
+    config.origin,
+    ...config.corsOrigins,
+  ];
 
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://localhost:3002",
-      "http://192.168.1.100:3000",
-      "http://192.168.1.100:3001",
-      "http://192.168.1.100:3002",
-      "https://localhost:3000",
-      "https://192.168.1.100:3000",
-      config.origin,
-    ],
+    origin: [...new Set(allowedOrigins)],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   }));
@@ -37,8 +39,9 @@ export function createApp() {
   app.use(cookieParser());
   app.use(generalLimiter);
 
-  // Serve uploaded files
-  app.use("/uploads", express.static(path.resolve(config.storage.uploadDir)));
+  if (config.storage.type === "local") {
+    app.use("/uploads", express.static(path.resolve(config.storage.uploadDir)));
+  }
 
   app.use("/api/v1", apiRouter);
 
@@ -47,3 +50,6 @@ export function createApp() {
 
   return app;
 }
+
+const app = createApp();
+export default app;

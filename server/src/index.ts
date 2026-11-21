@@ -1,19 +1,13 @@
-import http from "http";
-import { createApp } from "./app";
+import app from "./app";
 import { config } from "./config";
-import { initSocket } from "./lib/socket";
 import { prisma } from "./lib/prisma";
 
 async function main() {
   await prisma.$connect();
   console.log("✓ Database connected");
 
-  const app = createApp();
-  const server = http.createServer(app);
-  initSocket(server);
-
   const port = parseInt(process.env.PORT ?? String(config.port), 10);
-  server.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`✓ Server running on http://localhost:${port}`);
   });
 

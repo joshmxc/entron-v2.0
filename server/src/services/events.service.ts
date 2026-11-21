@@ -50,7 +50,7 @@ export async function updateEvent(id: string, data: Partial<{
   venue: string;
   venueSwahili: string;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   bannerUrl: string;
   isActive: boolean;
 }>) {

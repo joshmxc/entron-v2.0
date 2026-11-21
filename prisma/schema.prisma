@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  output   = "../server/generated/prisma"
 }
 
 datasource db {
@@ -104,16 +104,20 @@ model Guest {
   lastName      String    @map("last_name")
   phone         String?
   email         String?
+  organization  String?
   tableNumber   String?   @map("table_number")
   seatNumber    String?   @map("seat_number")
   guestType     GuestType @default(SINGLE) @map("guest_type")
   maxAdmissions Int       @default(1) @map("max_admissions")
   admissionsUsed Int      @default(0) @map("admissions_used")
   notes         String?
+  custom        Json?
+  validationWarnings Json? @map("validation_warnings")
   qrCode        String    @unique @map("qr_code")
   qrImageUrl    String?   @map("qr_image_url")
   isCheckedIn   Boolean   @default(false) @map("is_checked_in")
   checkedInAt   DateTime? @map("checked_in_at")
+  welcomeSmsAttemptedAt DateTime? @map("welcome_sms_attempted_at")
   importBatchId String?   @map("import_batch_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -130,12 +134,18 @@ model Guest {
 }
 
 model ImportBatch {
-  id         String   @id @default(uuid())
-  eventId    String   @map("event_id")
-  filename   String
-  rowCount   Int      @map("row_count")
-  importedBy String   @map("imported_by")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  eventId     String   @map("event_id")
+  filename    String
+  sourcePath  String?  @map("source_path")
+  status      String   @default("READY")
+  rowCount    Int      @map("row_count")
+  totalRows   Int      @default(0) @map("total_rows")
+  skippedRows Int      @default(0) @map("skipped_rows")
+  importedBy  String   @map("imported_by")
+  columnMap   Json?    @map("column_map")
+  error       String?
+  createdAt   DateTime @default(now()) @map("created_at")
 
   @@map("import_batches")
 }
@@ -180,7 +190,7 @@ model InvitationTemplate {
 model GuestInvitation {
   id           String           @id @default(uuid())
   guestId      String           @map("guest_id")
-  templateId   String           @map("template_id")
+  templateId   String?          @map("template_id")
   cardUrl      String?          @map("card_url")
   channel      MessageChannel   @default(WHATSAPP)
   status       InvitationStatus @default(PENDING)
@@ -193,7 +203,7 @@ model GuestInvitation {
   updatedAt    DateTime         @updatedAt @map("updated_at")
 
   guest    Guest              @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  template InvitationTemplate @relation(fields: [templateId], references: [id])
+  template InvitationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
 
   @@index([guestId])
   @@index([status])

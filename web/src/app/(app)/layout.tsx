@@ -6,7 +6,6 @@ import Sidebar from "@/components/layout/Sidebar";
 import BottomNav from "@/components/layout/BottomNav";
 import Header from "@/components/layout/Header";
 import { useOfflineQueue } from "@/hooks/useOfflineQueue";
-import { useSocket } from "@/hooks/useSocket";
 import ThemeProvider from "@/components/ThemeProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +13,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   useOfflineQueue();
-  useSocket();
 
   useEffect(() => {
     // Wait one tick for Zustand rehydration before checking auth

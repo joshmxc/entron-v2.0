@@ -17,6 +17,7 @@ import {
   getSMSBalance,
   normalizePhone,
   isNextSmsConfigured,
+  isNextSmsWhatsAppConfigured,
 } from "../lib/nextsms";
 import { config } from "../config";
 
@@ -32,9 +33,9 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
       provider:     "Next SMS",
       baseUrl:      "https://messaging-service.co.tz",
       configured:   isNextSmsConfigured(),
-      usernameSet:  !!config.nextsms.username,
-      passwordSet:  !!config.nextsms.password,
+      apiTokenSet:  !!config.nextsms.apiToken,
       senderId:     config.nextsms.senderId || "ENTRON",
+      whatsappConfigured: isNextSmsWhatsAppConfigured(),
     },
   });
 }
@@ -172,7 +173,7 @@ export async function testSMS(req: Request, res: Response): Promise<void> {
         error:  "Test SMS failed",
         detail: result.error,
         hint:   !isNextSmsConfigured()
-          ? "NEXTSMS_USERNAME or NEXTSMS_PASSWORD is not set in .env"
+          ? "NEXTSMS_API_TOKEN is not set in .env"
           : undefined,
       });
       return;

@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { sendTextMessage } from "../lib/whatsapp";
-import { sendBulkSMS as nextSmsBulk, getSMSBalance } from "../lib/nextsms";
+import { sendBulkSMS as nextSmsBulk, sendWhatsAppMessage, getSMSBalance } from "../lib/nextsms";
 
 const WHATSAPP_DELAY = 60; // ms between WhatsApp messages
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -57,7 +56,7 @@ export async function sendBulkMessages(opts: {
         const guest   = withPhone[i];
         const r       = bulkResult.results[i];
         const body    = smsPayload[i].text;
-        const succeeded = r?.status === "SENT" || r?.status === "SIMULATED";
+        const succeeded = r?.status === "SENT";
 
         await prisma.outboundMessage.create({
           data: {
@@ -91,19 +90,23 @@ export async function sendBulkMessages(opts: {
     }
   }
 
-  // ── WhatsApp: send individually (API limitation) ───────────────────────
+  // ── WhatsApp: NextSMS accepts template messages per recipient ─────────
   if (channel === "WHATSAPP" || channel === "BOTH") {
     for (const guest of withPhone) {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest.firstName, guest.lastName);
       try {
-        const externalId = await sendTextMessage({ to: guest.phone!, body });
+        const externalId = await sendWhatsAppMessage(guest.phone!, body);
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", externalId, status: "SENT" },
         });
         results.sent++;
         results.details.push({ name: `${guest.firstName} ${guest.lastName}`, phone: guest.phone!, status: "Sent", channel: "WHATSAPP" });
-      } catch {
+      } catch (err) {
+        console.error(
+          "[NextSMS] WhatsApp send failed:",
+          err instanceof Error ? err.message : String(err)
+        );
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", status: "FAILED" },
         });

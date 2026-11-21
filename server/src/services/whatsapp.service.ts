@@ -1,6 +1,5 @@
 import { prisma } from "../lib/prisma";
 import { sendTextMessage, sendImageMessage } from "../lib/whatsapp";
-import { emitInvitationStatus } from "../lib/socket";
 
 const RATE_DELAY_MS = 50; // 20 msgs/sec
 
@@ -39,7 +38,9 @@ export async function sendBulk(
       const invitation = guest.invitations[0];
 
       if (includeCard && invitation?.cardUrl) {
-        const cardPublicUrl = `${process.env.SERVER_ORIGIN ?? "http://localhost:4000"}${invitation.cardUrl}`;
+        const cardPublicUrl = /^https?:\/\//i.test(invitation.cardUrl)
+          ? invitation.cardUrl
+          : `${process.env.SERVER_ORIGIN ?? "http://localhost:4000"}${invitation.cardUrl}`;
         messageId = await sendImageMessage(guest.phone, cardPublicUrl, personalizedMsg);
       } else {
         messageId = await sendTextMessage({ to: guest.phone, body: personalizedMsg });
@@ -50,7 +51,6 @@ export async function sendBulk(
           where: { id: invitation.id },
           data: { status: "SENT", sentAt: new Date(), messageId },
         });
-        emitInvitationStatus(guestId, { status: "SENT", messageId });
       }
 
       await prisma.outboundMessage.create({

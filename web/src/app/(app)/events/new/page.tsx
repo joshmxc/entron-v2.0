@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import api from "@/lib/api";
 
 const schema = z.object({
@@ -19,17 +20,23 @@ type FormData = z.infer<typeof schema>;
 
 export default function NewEventPage() {
   const router = useRouter();
+  const [submitError, setSubmitError] = useState("");
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
   const onSubmit = async (data: FormData) => {
-    await api.post("/events", {
-      ...data,
-      startDate: new Date(data.startDate).toISOString(),
-      endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
-    });
-    router.push("/events");
+    setSubmitError("");
+    try {
+      await api.post("/events", {
+        ...data,
+        startDate: new Date(data.startDate).toISOString(),
+        endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
+      });
+      router.push("/events");
+    } catch {
+      setSubmitError("Could not save the event. Please check the details and try again.");
+    }
   };
 
   return (
@@ -42,6 +49,7 @@ export default function NewEventPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="card space-y-4">
+        {submitError && <p role="alert" className="text-red-400 text-sm">{submitError}</p>}
         <div className="input-group">
           <label>Event Name *</label>
           <input {...register("name")} placeholder="Annual Gala 2026" />

@@ -31,7 +31,7 @@ function TestSMSPanel() {
       setResult({
         success: true,
         message: data?.simulated
-          ? `Simulated — Next SMS credentials not set yet. To: ${data?.to}`
+          ? `Simulated — NextSMS API token not set yet. To: ${data?.to}`
           : `SMS sent! To: ${data?.to} | ID: ${data?.messageId}`,
         simulated: data?.simulated,
       });
@@ -51,10 +51,13 @@ function TestSMSPanel() {
         <MessageSquare className="w-4 h-4 text-entron-blue" /> Test SMS (Next SMS)
       </h2>
       <p className="text-xs text-slate-400">
-        Send a test message to verify your Next SMS credentials are working.
-        Set <code className="bg-slate-700 px-1 rounded">NEXTSMS_USERNAME</code> and{" "}
-        <code className="bg-slate-700 px-1 rounded">NEXTSMS_PASSWORD</code> in your server&apos;s{" "}
+        Send a test message to verify your NextSMS API v2 token and approved sender ID.
+        Set <code className="bg-slate-700 px-1 rounded">NEXTSMS_API_TOKEN</code> and{" "}
+        <code className="bg-slate-700 px-1 rounded">NEXTSMS_SENDER_ID</code> in your server&apos;s{" "}
         <code className="bg-slate-700 px-1 rounded">.env</code> file first.
+        For WhatsApp, also configure <code className="bg-slate-700 px-1 rounded">NEXTSMS_WHATSAPP_ACCOUNT</code>,{" "}
+        <code className="bg-slate-700 px-1 rounded">NEXTSMS_WHATSAPP_TEMPLATE</code>, and the approved template&apos;s{" "}
+        <code className="bg-slate-700 px-1 rounded">NEXTSMS_WHATSAPP_MESSAGE_PARAMETER</code>.
       </p>
 
       <div className="input-group">

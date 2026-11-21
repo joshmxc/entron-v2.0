@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma";
-import { emitScanResult } from "../lib/socket";
+import { isNextSmsConfigured, sendSMS } from "../lib/nextsms";
 import { ScanPayload, ScanResult } from "../types";
 
 export async function processScan(
@@ -9,59 +9,56 @@ export async function processScan(
 ): Promise<ScanResult> {
   const guest = await prisma.guest.findUnique({
     where: { qrCode: payload.qrCode },
+    include: { event: { select: { name: true } } },
   });
 
   if (!guest) {
     const result: ScanResult = { status: "INVALID_QR", message: "QR code not found" };
-    emitScanResult(payload.eventId, { status: "INVALID_QR", eventId: payload.eventId, staffId });
     return result;
   }
 
   if (guest.eventId !== payload.eventId) {
     const result: ScanResult = { status: "WRONG_EVENT", message: "QR code belongs to a different event" };
-    emitScanResult(payload.eventId, { status: "WRONG_EVENT", guestId: guest.id, eventId: payload.eventId, staffId });
     return result;
   }
 
-  if (guest.admissionsUsed >= guest.maxAdmissions) {
-    const result: ScanResult = {
-      status: "LIMIT_REACHED",
-      guest: {
-        id: guest.id,
-        firstName: guest.firstName,
-        lastName: guest.lastName,
-        guestType: guest.guestType,
-        maxAdmissions: guest.maxAdmissions,
-        admissionsUsed: guest.admissionsUsed,
-        tableNumber: guest.tableNumber,
-      },
-      message: `Entry limit reached (${guest.admissionsUsed}/${guest.maxAdmissions})`,
-    };
-    await prisma.scan.create({
-      data: {
-        guestId: guest.id,
-        eventId: payload.eventId,
-        staffId,
-        status: "LIMIT_REACHED",
-        admissionCount: 0,
-        deviceInfo,
-      },
-    });
-    emitScanResult(payload.eventId, { status: "LIMIT_REACHED", guestId: guest.id, eventId: payload.eventId, staffId });
-    return result;
-  }
+  const { admissionsUsed, maxAdmissions, welcomeSmsClaimed, limitReached } = await prisma.$transaction(async (tx) => {
+    const updatedGuests = await tx.$queryRaw<Array<{ admissions_used: number }>>`
+      UPDATE "guests"
+      SET "admissions_used" = "admissions_used" + 1,
+          "is_checked_in" = TRUE,
+          "checked_in_at" = COALESCE("checked_in_at", NOW())
+      WHERE "id" = ${guest.id}
+        AND "admissions_used" < "max_admissions"
+      RETURNING "admissions_used"
+    `;
 
-  const newUsed = guest.admissionsUsed + 1;
-  const [updatedGuest, scan] = await prisma.$transaction([
-    prisma.guest.update({
-      where: { id: guest.id },
-      data: {
-        admissionsUsed: newUsed,
-        isCheckedIn: true,
-        checkedInAt: guest.checkedInAt ?? new Date(),
-      },
-    }),
-    prisma.scan.create({
+    if (updatedGuests.length === 0) {
+      const currentGuest = await tx.guest.findUnique({
+        where: { id: guest.id },
+        select: { maxAdmissions: true, admissionsUsed: true },
+      });
+      if (!currentGuest) throw new Error("Guest was removed while processing the scan");
+
+      await tx.scan.create({
+        data: {
+          guestId: guest.id,
+          eventId: payload.eventId,
+          staffId,
+          status: "LIMIT_REACHED",
+          admissionCount: 0,
+          deviceInfo,
+        },
+      });
+      return {
+        admissionsUsed: currentGuest.admissionsUsed,
+        welcomeSmsClaimed: false,
+        limitReached: true,
+        maxAdmissions: currentGuest.maxAdmissions,
+      };
+    }
+
+    await tx.scan.create({
       data: {
         guestId: guest.id,
         eventId: payload.eventId,
@@ -72,8 +69,58 @@ export async function processScan(
         syncedFromOffline: !!payload.offlineTimestamp,
         originalTimestamp: payload.offlineTimestamp ? new Date(payload.offlineTimestamp) : undefined,
       },
-    }),
-  ]);
+    });
+    const welcomeSmsClaimed = !!guest.phone && isNextSmsConfigured()
+      ? (await tx.guest.updateMany({
+          where: { id: guest.id, welcomeSmsAttemptedAt: null },
+          data: { welcomeSmsAttemptedAt: new Date() },
+        })).count === 1
+      : false;
+    return {
+      admissionsUsed: updatedGuests[0].admissions_used,
+      welcomeSmsClaimed,
+      limitReached: false,
+      maxAdmissions: guest.maxAdmissions,
+    };
+  });
+
+  if (limitReached) {
+    return {
+      status: "LIMIT_REACHED",
+      guest: {
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        guestType: guest.guestType,
+        maxAdmissions,
+        admissionsUsed,
+        tableNumber: guest.tableNumber,
+      },
+      message: `Entry limit reached (${admissionsUsed}/${maxAdmissions})`,
+    };
+  }
+
+  if (welcomeSmsClaimed && guest.phone) {
+    const body = `Welcome ${guest.firstName} ${guest.lastName}! Your check-in for ${guest.event.name} is confirmed. Enjoy the event.`;
+    try {
+      const sms = await sendSMS(guest.phone, body);
+      await prisma.outboundMessage.create({
+        data: {
+          sentBy: staffId,
+          phone: guest.phone,
+          body,
+          channel: "SMS",
+          externalId: sms.messageId || null,
+          status: sms.status === "SENT" ? "SENT" : "FAILED",
+        },
+      });
+      if (sms.status !== "SENT") {
+        console.error(`[Scan] Welcome SMS was not sent for guest ${guest.id}: ${sms.error ?? sms.status}`);
+      }
+    } catch (err) {
+      console.error(`[Scan] Welcome SMS attempt failed for guest ${guest.id}:`, err);
+    }
+  }
 
   const result: ScanResult = {
     status: "SUCCESS",
@@ -83,20 +130,12 @@ export async function processScan(
       lastName: guest.lastName,
       guestType: guest.guestType,
       maxAdmissions: guest.maxAdmissions,
-      admissionsUsed: newUsed,
+      admissionsUsed,
       tableNumber: guest.tableNumber,
     },
     admissionCount: 1,
     message: `Welcome, ${guest.firstName} ${guest.lastName}!`,
   };
-
-  emitScanResult(payload.eventId, {
-    ...result,
-    scanId: scan.id,
-    staffId,
-    eventId: payload.eventId,
-    timestamp: scan.createdAt,
-  });
 
   return result;
 }
