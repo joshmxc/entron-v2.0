@@ -80,19 +80,6 @@ export default function MessagesPage() {
   const [whatsappTemplate, setWhatsappTemplate] = useState("");
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
   const activeWhatsappTemplate = whatsappTemplate || smsStatus?.whatsappTemplate || whatsappTemplates[0] || "";
-  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
-  const previewName = previewGuest
-    ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
-    : "{var1}";
-  const whatsappPersonalisation = message.trim()
-    ? message
-      .replace(/\{\{name\}\}/g, previewName)
-      .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
-      .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
-    : previewName;
-  const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
-    ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
-    : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const charactersPerSms = encodingUnicode ? 70 : 160;
   const smsPages = Math.ceil(message.length / charactersPerSms) || 1;
@@ -107,6 +94,20 @@ export default function MessagesPage() {
     if (recipientMode === "type") return guests.filter((g) => selectedTypes.has(g.guestType)).map((g) => g.id);
     return Array.from(selectedIds);
   }, [recipientMode, guests, selectedTypes, selectedIds]);
+
+  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
+  const previewName = previewGuest
+    ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
+    : "{var1}";
+  const whatsappPersonalisation = message.trim()
+    ? message
+      .replace(/\{\{name\}\}/g, previewName)
+      .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
+      .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
+    : previewName;
+  const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
+    ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
+    : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
 
   const toggleType = (t: GuestType) => setSelectedTypes((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; });
   const toggleGuest = (id: string) => setSelectedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
