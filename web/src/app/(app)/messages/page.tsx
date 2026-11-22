@@ -185,7 +185,11 @@ export default function MessagesPage() {
         {smsBalance && (
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-blue-400" />
-            <span>SMS Balance: <strong className="text-slate-200">{smsBalance.display}</strong></span>
+            <span>
+              SMS Balance: <strong className="text-slate-200">{smsBalance.display}</strong>
+              {" · "}
+              Remaining: <strong className="text-slate-200">{(smsBalance.smsCount ?? 0).toLocaleString()} SMS</strong>
+            </span>
           </div>
         )}
       </div>

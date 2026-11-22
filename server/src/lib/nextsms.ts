@@ -240,9 +240,10 @@ export async function getSMSBalance(): Promise<{
   balance: number;
   display: string;
   channel: string;
+  smsCount: number;
 }> {
   if (!isNextSmsConfigured()) {
-    return { balance: 0, display: "Credentials not set", channel: "—" };
+    return { balance: 0, display: "Credentials not set", channel: "—", smsCount: 0 };
   }
 
   try {
@@ -255,10 +256,11 @@ export async function getSMSBalance(): Promise<{
       balance: res.data?.sms_balance ?? 0,
       display: res.data?.display       ?? String(res.data?.sms_balance ?? 0),
       channel: res.data?.default       ?? "Internet Channel",
+      smsCount: Math.max(0, Math.floor((Number(res.data?.sms_balance ?? 0) / 20))),
     };
   } catch (err) {
     console.error("[NextSMS] Balance check failed:", (err as AxiosError).message);
-    return { balance: 0, display: "Error fetching balance", channel: "—" };
+    return { balance: 0, display: "Error fetching balance", channel: "—", smsCount: 0 };
   }
 }
 
