@@ -5,11 +5,28 @@ import { generateCards } from "./invitations.service";
 const WHATSAPP_DELAY = 60; // ms between WhatsApp messages
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function personalize(template: string, firstName: string, lastName: string) {
+function personalize(
+  template: string,
+  guest: {
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    guestType: "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
+    uniqueCode: string;
+    isCheckedIn: boolean;
+  }
+) {
+  const fullName = `${guest.firstName} ${guest.lastName}`.trim();
+  const ticket = guest.guestType;
+  const status = guest.isCheckedIn ? "Checked In" : "Waiting";
   return template
-    .replace(/\{\{name\}\}/g, `${firstName} ${lastName}`)
-    .replace(/\{\{firstName\}\}/g, firstName)
-    .replace(/\{\{lastName\}\}/g, lastName);
+    .replace(/\{\{guest\}\}|\{\{name\}\}/g, fullName)
+    .replace(/\{\{firstName\}\}/g, guest.firstName)
+    .replace(/\{\{lastName\}\}/g, guest.lastName)
+    .replace(/\{\{phone\}\}/g, guest.phone ?? "")
+    .replace(/\{\{ticket\}\}/g, ticket)
+    .replace(/\{\{uniqueId\}\}|\{\{uniqueCode\}\}/g, guest.uniqueCode)
+    .replace(/\{\{status\}\}/g, status);
 }
 
 export async function sendBulkMessages(opts: {
@@ -35,7 +52,18 @@ export async function sendBulkMessages(opts: {
   // Load all guests in one query
   const guests = await prisma.guest.findMany({
     where: { id: { in: guestIds } },
-    select: { id: true, firstName: true, lastName: true, phone: true, invitations: { orderBy: { createdAt: "desc" }, take: 1 } },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      guestType: true,
+      uniqueCode: true,
+      isCheckedIn: true,
+      admissionsUsed: true,
+      tableNumber: true,
+      invitations: { orderBy: { createdAt: "desc" }, take: 1 },
+    },
   });
 
   const withPhone = guests.filter((g) => g.phone);
@@ -52,7 +80,7 @@ export async function sendBulkMessages(opts: {
     try {
       const smsPayload = withPhone.map((g) => ({
         to:   g.phone!,
-        text: personalize(message, g.firstName, g.lastName),
+        text: personalize(message, g),
       }));
 
       const reference = `entron_${Date.now()}`;
@@ -89,7 +117,7 @@ export async function sendBulkMessages(opts: {
       // Entire batch failed — mark all as failed
       for (const guest of withPhone) {
         await prisma.outboundMessage.create({
-          data: { sentBy, phone: guest.phone!, body: personalize(message, guest.firstName, guest.lastName), channel: "SMS", status: "FAILED" },
+          data: { sentBy, phone: guest.phone!, body: personalize(message, guest), channel: "SMS", status: "FAILED" },
         });
         results.failed++;
         results.details.push({ name: `${guest.firstName} ${guest.lastName}`, phone: guest.phone!, status: "Failed", channel: "SMS" });
@@ -101,7 +129,7 @@ export async function sendBulkMessages(opts: {
   if (channel === "WHATSAPP" || channel === "BOTH") {
     for (const guest of withPhone) {
       await sleep(WHATSAPP_DELAY);
-      const body = personalize(message, guest.firstName, guest.lastName);
+      const body = personalize(message, guest);
       let cardUrl = guest.invitations[0]?.cardUrl;
       if (!cardUrl) {
         await generateCards(opts.eventId, null, [guest.id]);

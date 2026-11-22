@@ -28,7 +28,16 @@ const MSG_STATUS_ICON: Record<string, React.ReactNode> = {
   PENDING: <Clock className="w-4 h-4 text-yellow-400" />,
 };
 
-interface Guest { id: string; firstName: string; lastName: string; phone?: string; guestType: GuestType; cardUrl?: string }
+interface Guest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  guestType: GuestType;
+  cardUrl?: string;
+  uniqueCode?: string;
+  isCheckedIn?: boolean;
+}
 interface Message { id: string; phone: string; body: string; channel: string; status: string; createdAt: string; sender: { name: string } }
 
 export default function MessagesPage({ params }: { params: Promise<{ eventId: string }> }) {
@@ -132,9 +141,13 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
     : "{var1}";
   const whatsappPersonalisation = message.trim()
     ? message
-      .replace(/\{\{name\}\}/g, previewName)
+      .replace(/\{\{guest\}\}|\{\{name\}\}/g, previewName)
       .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
       .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
+      .replace(/\{\{phone\}\}/g, previewGuest?.phone || "")
+      .replace(/\{\{ticket\}\}/g, previewGuest?.guestType || "")
+      .replace(/\{\{uniqueId\}\}|\{\{uniqueCode\}\}/g, previewGuest?.uniqueCode || "")
+      .replace(/\{\{status\}\}/g, previewGuest?.isCheckedIn ? "Checked In" : "Waiting")
     : previewName;
   const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
     ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
@@ -398,10 +411,16 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
 
             {/* Variables quick-insert */}
             <div className="flex gap-2 flex-wrap">
-              {["{{name}}", "{{firstName}}", "{{lastName}}"].map((v) => (
-                <button key={v} onClick={() => setMessage((m) => m + v)}
+              {[
+                ["{{guest}}", "Guest"],
+                ["{{phone}}", "Phone"],
+                ["{{ticket}}", "Ticket"],
+                ["{{uniqueId}}", "Unique ID"],
+                ["{{status}}", "Status"],
+              ].map(([variable, label]) => (
+                <button key={variable} onClick={() => setMessage((message) => message + variable)}
                   className="px-2 py-1 rounded bg-slate-700 text-xs text-slate-300 font-mono hover:bg-slate-600 transition-colors">
-                  {v}
+                  {variable} <span className="ml-1 text-slate-400">{label}</span>
                 </button>
               ))}
             </div>

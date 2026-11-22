@@ -14,7 +14,19 @@ type Channel = "WHATSAPP" | "SMS" | "BOTH";
 type GuestType = "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
 
 interface Event { id: string; name: string }
-interface Guest { id: string; firstName: string; lastName: string; phone?: string; guestType: GuestType; eventId: string; cardUrl?: string }
+interface Guest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  guestType: GuestType;
+  eventId: string;
+  cardUrl?: string;
+  uniqueCode?: string;
+  isCheckedIn?: boolean;
+  admissionsUsed?: number;
+  tableNumber?: string | null;
+}
 interface Message { id: string; phone: string; body: string; channel: string; status: string; createdAt: string; sender: { name: string } }
 
 const TYPE_LABEL: Record<GuestType, string> = { SINGLE: "Single", DOUBLE: "Double", FAMILY: "Family", VIP: "VIP" };
@@ -126,9 +138,13 @@ export default function MessagesPage() {
     : "{var1}";
   const whatsappPersonalisation = message.trim()
     ? message
-      .replace(/\{\{name\}\}/g, previewName)
+      .replace(/\{\{guest\}\}|\{\{name\}\}/g, previewName)
       .replace(/\{\{firstName\}\}/g, previewGuest?.firstName || "{firstName}")
       .replace(/\{\{lastName\}\}/g, previewGuest?.lastName || "{lastName}")
+      .replace(/\{\{phone\}\}/g, previewGuest?.phone || "")
+      .replace(/\{\{ticket\}\}/g, previewGuest?.guestType || "")
+      .replace(/\{\{uniqueId\}\}|\{\{uniqueCode\}\}/g, previewGuest?.uniqueCode || "")
+      .replace(/\{\{status\}\}/g, previewGuest?.isCheckedIn ? "Checked In" : "Waiting")
     : previewName;
   const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
     ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
@@ -359,10 +375,19 @@ export default function MessagesPage() {
               </div>
             )}
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <div className="flex gap-2">
-                {["{{name}}", "{{firstName}}", "{{lastName}}"].map((v) => (
-                  <button key={v} onClick={() => setMessage((m) => m + v)}
-                    className="px-2 py-0.5 rounded bg-slate-700 font-mono hover:bg-slate-600 transition-colors">{v}</button>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ["{{guest}}", "Guest"],
+                  ["{{phone}}", "Phone"],
+                  ["{{ticket}}", "Ticket"],
+                  ["{{uniqueId}}", "Unique ID"],
+                  ["{{status}}", "Status"],
+                ].map(([variable, label]) => (
+                  <button key={variable} onClick={() => setMessage((message) => message + variable)}
+                    className="px-2 py-1 rounded bg-slate-700 text-xs text-slate-300 hover:bg-slate-600 transition-colors">
+                    <span className="font-mono text-blue-300">{variable}</span>
+                    <span className="ml-1 text-slate-400">{label}</span>
+                  </button>
                 ))}
               </div>
               <span>
