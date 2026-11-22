@@ -349,11 +349,14 @@ export async function sendWhatsAppTemplateBatch(
     if (!/^\d{12}$/.test(destination)) {
       throw new Error(`Invalid Tanzania WhatsApp phone number: ${recipient.to}`);
     }
-    if (!recipient.personalisationValue.trim()) {
+    // WhatsApp template parameters cannot contain newlines, tabs or 4+ consecutive spaces.
+    const personalisationValue = recipient.personalisationValue.replace(/\s+/g, " ").trim();
+    if (!personalisationValue) {
       throw new Error(`Personalisation value is empty for ${recipient.to}`);
     }
     return {
       ...recipient,
+      personalisationValue,
       destination,
     };
   });
@@ -468,7 +471,7 @@ export async function testWhatsAppTemplate(
     template: template || config.nextsms.whatsappTemplate,
     to: [Number(destination)],
     personalisation: [
-      { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue },
+      { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue.replace(/\s+/g, " ").trim() },
     ],
   };
   if (imageUrl) {
