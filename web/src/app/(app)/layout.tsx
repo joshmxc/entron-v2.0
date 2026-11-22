@@ -28,16 +28,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ThemeProvider>
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen w-full max-w-[100vw] overflow-x-hidden">
       {/* Sidebar — desktop only */}
       <aside className="hidden md:flex w-64 flex-col fixed inset-y-0 left-0 z-20">
         <Sidebar />
       </aside>
 
       {/* Main content */}
-      <div className="min-w-0 flex-1 md:ml-64 flex flex-col min-h-screen">
+      <div className="min-w-0 w-full flex-1 md:ml-64 flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1 min-w-0 p-4 md:p-6 pb-24 md:pb-6">
+        <main className="flex-1 min-w-0 w-full max-w-[100vw] p-3 sm:p-4 md:p-6 pb-24 md:pb-6 overflow-x-hidden">
           {children}
         </main>
       </div>

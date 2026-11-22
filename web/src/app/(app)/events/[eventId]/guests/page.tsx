@@ -126,12 +126,12 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
+      <div className="mb-6 flex min-w-0 flex-wrap items-center gap-3">
         <Link href={`/events/${eventId}`} className="text-slate-400 hover:text-slate-100">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h1 className="page-title flex-1">Guests ({total})</h1>
-        <div className="flex gap-2">
+        <div className="flex min-w-0 flex-wrap justify-end gap-2">
           {isAdmin && (
             <button type="button" onClick={copyPublicGuestListLink} className="btn-secondary">
               <LinkIcon className="w-4 h-4" />
@@ -195,7 +195,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
       )}
 
       {/* Search & filter */}
-      <div className="flex gap-3 mb-4">
+      <div className="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -205,7 +205,7 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
             className="pl-10"
           />
         </div>
-        <div className="flex gap-1 bg-entron-dark-card border border-entron-dark-border rounded-lg p-1">
+        <div className="flex w-full gap-1 rounded-lg border border-entron-dark-border bg-entron-dark-card p-1 sm:w-auto">
           {(["all", "in", "out"] as const).map((f) => (
             <button
               key={f}
@@ -298,9 +298,9 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
         {guests.map((g: Record<string, unknown>) => (
-          <div key={String(g.id)} className="card flex items-center gap-3">
-            <Link href={`/events/${eventId}/guests/${g.id}`} className="flex flex-1 items-center gap-3 min-w-0">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+          <div key={String(g.id)} className="card flex min-w-0 items-center gap-2 sm:gap-3">
+            <Link href={`/events/${eventId}/guests/${g.id}`} className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+              <div className={`h-9 w-9 shrink-0 rounded-full flex items-center justify-center sm:h-10 sm:w-10 ${
                 g.isCheckedIn ? "bg-green-900/50" : "bg-slate-700"
               }`}>
                 {g.isCheckedIn
@@ -309,11 +309,11 @@ export default function GuestsPage({ params }: { params: Promise<{ eventId: stri
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-200">{g.firstName as string} {g.lastName as string}</p>
-                <p className="text-xs text-slate-400">{(g.phone as string) ?? ""}</p>
+                <p className="truncate font-medium text-slate-200">{g.firstName as string} {g.lastName as string}</p>
+                <p className="truncate text-xs text-slate-400">{(g.phone as string) ?? ""}</p>
                 <p className="mt-1 font-mono text-xs text-entron-blue">{String(g.uniqueCode ?? "—")}</p>
               </div>
-              <span className={`badge ${TYPE_COLORS[g.guestType as string] ?? "badge-blue"}`}>
+              <span className={`badge shrink-0 ${TYPE_COLORS[g.guestType as string] ?? "badge-blue"}`}>
                 {TYPE_LABELS[g.guestType as string]}
               </span>
             </Link>

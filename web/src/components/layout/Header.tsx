@@ -102,7 +102,7 @@ export default function Header() {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 rounded-xl z-50 overflow-hidden"
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-80 rounded-xl z-50 overflow-hidden"
               style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
               <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
                 <p className="font-semibold text-sm" style={{ color: "var(--text)" }}>Recent Scans</p>
@@ -173,7 +173,7 @@ export default function Header() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-44 rounded-xl py-1 z-50"
+            <div className="absolute right-0 top-full mt-2 w-44 max-w-[calc(100vw-2rem)] rounded-xl py-1 z-50"
               style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
               <div className="px-3 py-2 border-b" style={{ borderColor: "var(--border)" }}>
                 <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{user?.name}</p>

@@ -29,7 +29,7 @@ export default function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 pb-safe"
       style={{ backgroundColor: "var(--surface)", borderTop: "1px solid var(--border)" }}
     >
-      <div className="flex items-center justify-around h-16">
+      <div className="grid h-16 w-full grid-cols-5 items-center justify-items-center px-1">
         {visibleItems.map(({ href, label, icon: Icon, highlight }) => {
           const active = pathname.startsWith(href);
 
@@ -51,8 +51,8 @@ export default function BottomNav() {
           const iconStyle = !active && !highlight ? { color: "var(--text-faint)" } : {};
 
           return (
-            <Link key={href} href={href} className="flex flex-col items-center gap-0.5 px-3 py-1 min-w-0">
-              <div className={containerCls}>
+            <Link key={href} href={href} className="flex w-full min-w-0 flex-col items-center gap-0.5 px-1 py-1">
+              <div className={cn(containerCls, "h-9 w-9")}>
                 <Icon className={iconCls} style={iconStyle} />
               </div>
               <span

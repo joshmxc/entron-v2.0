@@ -66,8 +66,8 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto w-full max-w-[1800px] space-y-5">
       {/* Welcome bar */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h2 className="text-lg font-bold" style={{ color: "var(--text)" }}>
             Welcome back, {user?.name}
             {activeEvent && <span className="font-normal text-sm ml-2" style={{ color: "var(--text-muted)" }}>| {activeEvent.name}</span>}
@@ -76,7 +76,7 @@ export default function DashboardPage() {
             Here is an overview of your event
           </p>
         </div>
-        <Link href="/scanner" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold"
+        <Link href="/scanner" className="hidden shrink-0 items-center gap-2 px-4 py-2 rounded-xl text-white text-sm font-semibold sm:flex"
           style={{ background: "linear-gradient(135deg,#1e3a8a,#1e3a8a)", boxShadow: "0 2px 8px rgba(30,58,138,0.3)" }}>
           <ScanLine className="w-4 h-4" /> Start Scanning
         </Link>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       )}
 
       {/* Two columns */}
-      <div className="grid min-w-0 gap-5 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+      <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
         {/* Recent scans */}
         <div className="min-w-0 lg:col-span-2 xl:col-span-4 2xl:col-span-5 card space-y-3">
           <div className="flex items-center justify-between">
@@ -143,7 +143,7 @@ export default function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl" style={{ border: "1px solid var(--border)" }}>
+            <div className="overflow-x-auto rounded-xl" style={{ border: "1px solid var(--border)" }}>
               <table className="w-full text-sm">
                 <thead style={{ backgroundColor: "var(--surface-2)" }}>
                   <tr>

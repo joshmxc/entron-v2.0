@@ -236,4 +236,38 @@ main > * { animation: pageIn 0.2s ease; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 @media (max-width: 768px) { .hide-mobile { display: none !important; } }
+@media (max-width: 640px) {
+  main {
+    min-width: 0;
+  }
+  .card,
+  .stat-card,
+  .table-container {
+    min-width: 0;
+  }
+  .card {
+    padding: 0.875rem;
+  }
+  .stat-card {
+    padding: 0.875rem;
+  }
+  .page-header {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .page-header > :not(.page-title) {
+    margin-left: auto;
+  }
+  table.entron-table {
+    min-width: 680px;
+  }
+  .table-container {
+    max-width: 100%;
+  }
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+}
 @media print { .no-print { display: none !important; } body { background: white; color: black; } }
