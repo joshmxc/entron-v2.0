@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
 
-type Channel = "WHATSAPP";
+type Channel = "WHATSAPP" | "SMS" | "BOTH";
 type GuestType = "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
 
 interface Event { id: string; name: string }
@@ -33,7 +33,9 @@ const TYPE_LABEL: Record<GuestType, string> = { SINGLE: "Single", DOUBLE: "Doubl
 const TYPE_COLOR: Record<GuestType, string> = { SINGLE: "badge-blue", DOUBLE: "badge-purple", FAMILY: "badge-green", VIP: "badge-yellow" };
 
 const CHANNEL_OPTIONS: { value: Channel; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: "WHATSAPP", label: "WhatsApp", icon: <MessageSquare className="w-4 h-4" />, color: "border-green-500 bg-green-500/10 text-green-400" },
+  { value: "SMS",      label: "SMS",            icon: <Phone className="w-4 h-4" />,         color: "border-blue-500 bg-blue-500/10 text-blue-400" },
+  { value: "WHATSAPP", label: "WhatsApp",       icon: <MessageSquare className="w-4 h-4" />, color: "border-green-500 bg-blue-500/10 text-blue-400" },
+  { value: "BOTH",     label: "SMS + WhatsApp", icon: <Send className="w-4 h-4" />,          color: "border-purple-500 bg-purple-500/10 text-purple-400" },
 ];
 
 const MSG_STATUS_ICON: Record<string, React.ReactNode> = {
@@ -75,7 +77,7 @@ export default function MessagesPage() {
       : [];
 
   const [tab, setTab] = useState<"compose" | "history">("compose");
-  const [channel, setChannel] = useState<Channel>("WHATSAPP");
+  const [channel, setChannel] = useState<Channel>("SMS");
   const [message, setMessage] = useState("");
   const [recipientMode, setRecipientMode] = useState<"all" | "type" | "select">("all");
   const [selectedTypes, setSelectedTypes] = useState<Set<GuestType>>(new Set());
@@ -160,8 +162,9 @@ export default function MessagesPage() {
         guestIds: resolvedIds,
         message,
         channel,
-        whatsappAccount: activeWhatsappAccount,
-        whatsappTemplate: activeWhatsappTemplate,
+        senderId: channel === "WHATSAPP" ? undefined : activeSenderId,
+        whatsappAccount: channel === "SMS" ? undefined : activeWhatsappAccount,
+        whatsappTemplate: channel === "SMS" ? undefined : activeWhatsappTemplate,
         whatsappMessageParameter: smsStatus?.whatsappMessageParameter || "var1",
         date: scheduleDate || undefined,
         time: scheduleTime || undefined,
@@ -178,7 +181,13 @@ export default function MessagesPage() {
     <div className="space-y-5 max-w-3xl">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="page-title">WhatsApp Messages</h1>
+        <h1 className="page-title">Messages / SMS</h1>
+        {smsBalance && (
+          <div className="text-xs text-slate-400 flex items-center gap-1.5">
+            <Phone className="w-3.5 h-3.5 text-blue-400" />
+            <span>SMS Balance: <strong className="text-slate-200">{smsBalance.display}</strong></span>
+          </div>
+        )}
       </div>
 
       {/* Event selector */}
@@ -193,14 +202,12 @@ export default function MessagesPage() {
 
       {/* Tabs */}
       <div className="flex border-b border-entron-dark-border">
-        <button onClick={() => setTab("compose")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === "compose" ? "border-entron-blue text-entron-blue" : "border-transparent text-slate-400 hover:text-slate-200"}`}>
-          <Send key="s" className="w-4 h-4" /> Compose
-        </button>
-        <button onClick={() => setTab("history")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === "history" ? "border-entron-blue text-entron-blue" : "border-transparent text-slate-400 hover:text-slate-200"}`}>
-          <MessageSquare key="m" className="w-4 h-4" /> History
-        </button>
+        {([["compose", "Compose", <Send key="s" className="w-4 h-4" />], ["history", "History", <MessageSquare key="m" className="w-4 h-4" />]] as [string, string, React.ReactNode][]).map(([key, label, icon]) => (
+          <button key={key} onClick={() => setTab(key as typeof tab)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab === key ? "border-entron-blue text-entron-blue" : "border-transparent text-slate-400 hover:text-slate-200"}`}>
+            {icon}{label}
+          </button>
+        ))}
       </div>
 
       {/* ── COMPOSE ── */}
@@ -218,7 +225,21 @@ export default function MessagesPage() {
                 </button>
               ))}
             </div>
-            {analysisVisible && (
+            {(channel === "SMS" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Sender ID <span className="text-red-400">*</span></label>
+                  <select value={activeSenderId} onChange={(e) => setSenderId(e.target.value)} className="w-full text-sm">
+                    {senderIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
+                  <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
+                </div>
+              </div>
+            )}
+            {(channel === "WHATSAPP" || channel === "BOTH") && analysisVisible && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-400">WhatsApp Account <span className="text-red-400">*</span></label>
@@ -306,16 +327,14 @@ export default function MessagesPage() {
           {/* Message */}
           <div className="card space-y-3">
             <h2 className="text-sm font-semibold text-slate-200">
-              Template Personalisation
+              {channel === "WHATSAPP" || channel === "BOTH" ? "Template Personalisation" : "Message"}
             </h2>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={4}
-              className="text-sm w-full"
-              placeholder="Enter the value for {var1}, for example {{guest}}"
-            />
-            <div className="rounded-xl border border-green-700/40 bg-[#071611] p-4 space-y-3">
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={4} className="text-sm w-full"
+              placeholder={channel === "WHATSAPP" || channel === "BOTH"
+                ? "Enter the value for {var1}, for example {{name}}"
+                : "Write your message...\n\nUse {{name}} for guest name"} />
+            {(channel === "WHATSAPP" || channel === "BOTH") && (
+              <div className="rounded-xl border border-green-700/40 bg-[#071611] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-green-400">WhatsApp recipient preview</p>
                   {previewGuest && (
@@ -354,6 +373,7 @@ export default function MessagesPage() {
                   </p>
                 )}
               </div>
+            )}
             <div className="flex items-center justify-between text-xs text-slate-500">
               <div className="flex flex-wrap gap-2">
                 {[
@@ -372,6 +392,9 @@ export default function MessagesPage() {
               </div>
               <span>
                 {message.length} chars
+                {(channel === "SMS" || channel === "BOTH") && (
+                  ` · ${encodingUnicode ? "Unicode" : "GSM"} · SMS: ${smsPages} ${smsPages === 1 ? "page" : "pages"}`
+                )}
               </span>
             </div>
           </div>
@@ -389,14 +412,16 @@ export default function MessagesPage() {
           )}
 
           {/* Send button */}
-          <button
-            type="button"
-            onClick={runWhatsAppAnalysis}
-            disabled={resolvedIds.length === 0}
-            className="w-full rounded-lg border border-entron-dark-border py-2.5 text-sm font-medium text-slate-300 hover:border-slate-500"
-          >
-            {whatsappTesting ? "Analyzing..." : "Analyze"}
-          </button>
+          {(channel === "WHATSAPP" || channel === "BOTH") && (
+            <button
+              type="button"
+              onClick={runWhatsAppAnalysis}
+              disabled={resolvedIds.length === 0}
+              className="w-full rounded-lg border border-entron-dark-border py-2.5 text-sm font-medium text-slate-300 hover:border-slate-500"
+            >
+              {whatsappTesting ? "Analyzing..." : "Analyze"}
+            </button>
+          )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0} className="btn-primary w-full py-3">
             {sending
               ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>

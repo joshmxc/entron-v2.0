@@ -10,11 +10,13 @@ import api from "@/lib/api";
 
 const fetcher = (url: string) => api.get(url).then((r) => r.data);
 
-type Channel = "WHATSAPP";
+type Channel = "WHATSAPP" | "SMS" | "BOTH";
 type GuestType = "SINGLE" | "DOUBLE" | "FAMILY" | "VIP";
 
 const CHANNEL_OPTIONS: { value: Channel; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: "WHATSAPP", label: "WhatsApp", icon: <MessageSquare className="w-4 h-4" />, color: "border-green-500 bg-green-500/10 text-green-400" },
+  { value: "WHATSAPP", label: "WhatsApp", icon: <MessageSquare className="w-4 h-4" />, color: "border-green-500 bg-blue-500/10 text-blue-400" },
+  { value: "SMS",       label: "SMS",      icon: <Phone className="w-4 h-4" />,          color: "border-blue-500 bg-blue-500/10 text-blue-400" },
+  { value: "BOTH",      label: "SMS + WhatsApp", icon: <Send className="w-4 h-4" />,     color: "border-purple-500 bg-purple-500/10 text-purple-400" },
 ];
 
 const TYPE_LABEL: Record<GuestType, string> = { SINGLE: "Single", DOUBLE: "Double", FAMILY: "Family", VIP: "VIP" };
@@ -116,8 +118,9 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         guestIds: resolvedIds,
         message,
         channel,
-        whatsappAccount: activeWhatsappAccount,
-        whatsappTemplate: activeWhatsappTemplate,
+        senderId: channel === "WHATSAPP" ? undefined : activeSenderId,
+        whatsappAccount: channel === "SMS" ? undefined : activeWhatsappAccount,
+        whatsappTemplate: channel === "SMS" ? undefined : activeWhatsappTemplate,
         whatsappMessageParameter: smsStatus?.whatsappMessageParameter || "var1",
         date: scheduleDate || undefined,
         time: scheduleTime || undefined,
@@ -181,6 +184,9 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         <h1 className="page-title flex-1">Messages</h1>
         <div className="flex items-center gap-3 text-xs text-slate-500">
           <span>{guestsWithPhone}/{guests.length} with phone</span>
+          {smsBalance && (
+            <span className="badge badge-green">SMS: {smsBalance.display}</span>
+          )}
         </div>
       </div>
 
@@ -213,7 +219,22 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {(channel === "SMS" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Sender ID <span className="text-red-400">*</span></label>
+                  <select value={activeSenderId} onChange={(e) => setSenderId(e.target.value)} className="w-full text-sm">
+                    {senderIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
+                  <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
+                </div>
+              </div>
+            )}
+            {(channel === "WHATSAPP" || channel === "BOTH") && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-400">WhatsApp Account <span className="text-red-400">*</span></label>
                   <select value={activeWhatsappAccount} onChange={(e) => setWhatsappAccount(e.target.value)} className="w-full text-sm">
@@ -239,9 +260,22 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
                   <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="w-full text-sm" />
                 </div>
               </div>
-            <p className="text-xs text-slate-500">
+            )}
+            {channel === "SMS" && (
+              <p className="text-xs text-slate-500">
+                Uses the NextSMS standard SMS service.
+              </p>
+            )}
+            {channel === "WHATSAPP" && (
+              <p className="text-xs text-slate-500">
                 Uses your configured NextSMS WhatsApp account and approved template. The composed message fills its configured placeholder.
-            </p>
+              </p>
+            )}
+            {channel === "BOTH" && (
+              <p className="text-xs text-slate-500">
+                Each guest will receive both NextSMS WhatsApp (approved template) and SMS messages.
+              </p>
+            )}
           </div>
 
           {/* Recipients */}
@@ -313,20 +347,27 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
 
           {/* Message composer */}
           <div className="card space-y-3">
-            <h2 className="font-semibold text-slate-200 text-sm">Template Personalisation</h2>
+            <h2 className="font-semibold text-slate-200 text-sm">
+              {channel === "WHATSAPP" || channel === "BOTH" ? "Template Personalisation" : "Message"}
+            </h2>
             <div className="space-y-1">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Enter the value for {var1}, for example {{guest}}"
+                placeholder={channel === "WHATSAPP" || channel === "BOTH"
+                  ? "Enter the value for {var1}, for example {{name}}"
+                  : "Write your message here...\n\nYou can use:\n{{name}} — full name\n{{firstName}} — first name\n{{lastName}} — last name"}
                 rows={5}
                 className="text-sm w-full"
               />
               <div className="flex justify-between text-xs text-slate-500 px-1">
                 <span>Characters: {charCount}</span>
+                {(channel === "SMS" || channel === "BOTH") && (
+                  <span>{encodingUnicode ? "Unicode" : "GSM"} · SMS: {smsPages} {smsPages === 1 ? "page" : "pages"}</span>
+                )}
               </div>
             </div>
-            {analysisVisible && (
+            {(channel === "WHATSAPP" || channel === "BOTH") && analysisVisible && (
               <div className="rounded-xl border border-green-700/40 bg-[#071611] p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-green-400">WhatsApp recipient preview</p>
@@ -411,14 +452,16 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
           )}
 
           {/* Send button */}
-          <button
-            type="button"
-            onClick={runWhatsAppAnalysis}
-            disabled={resolvedIds.length === 0}
-            className="w-full rounded-lg border border-entron-dark-border py-3 text-sm font-medium text-slate-300 hover:border-slate-500"
-          >
-            {whatsappTesting ? "Analyzing..." : "Analyze"}
-          </button>
+          {(channel === "WHATSAPP" || channel === "BOTH") && (
+            <button
+              type="button"
+              onClick={runWhatsAppAnalysis}
+              disabled={resolvedIds.length === 0}
+              className="w-full rounded-lg border border-entron-dark-border py-3 text-sm font-medium text-slate-300 hover:border-slate-500"
+            >
+              {whatsappTesting ? "Analyzing..." : "Analyze"}
+            </button>
+          )}
           <button onClick={send} disabled={sending || !message.trim() || resolvedIds.length === 0}
             className="btn-primary w-full py-3">
             {sending ? (
@@ -427,6 +470,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
               <>
                 <Send className="w-4 h-4" />
                 Send to {resolvedIds.length} {recipientMode !== "all" ? "selected" : "guests"}
+                {channel === "BOTH" ? " (WhatsApp + SMS)" : ` (${channel})`}
               </>
             )}
           </button>

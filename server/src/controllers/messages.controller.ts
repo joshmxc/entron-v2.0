@@ -12,17 +12,7 @@ export async function listMessages(req: Request, res: Response) {
 
 export async function sendMessages(req: Request, res: Response) {
   const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, date, time } = req.body;
-  if (!message || typeof message !== "string" || !message.trim()) {
-    res.status(400).json({ success: false, error: "message is required" });
-    return;
-  }
-  if (channel !== "WHATSAPP") {
-    res.status(400).json({
-      success: false,
-      error: "Only WhatsApp template messaging is enabled. SMS and SMS+WhatsApp are not available.",
-    });
-    return;
-  }
+  if (!message || !channel) { res.status(400).json({ success: false, error: "message and channel required" }); return; }
 
   const allGuests = await svc.getEventGuests(req.params.eventId);
   const ids: string[] = guestIds?.length
