@@ -319,6 +319,135 @@ export async function sendWhatsAppMessage(
   return String(msg.messageId);
 }
 
+export interface WhatsAppTemplateRecipient {
+  to: string;
+  personalisationValue: string;
+  imageUrl?: string;
+}
+
+export interface WhatsAppTemplateBatchResult {
+  results: SMSResult[];
+}
+
+export async function sendWhatsAppTemplateBatch(
+  recipients: WhatsAppTemplateRecipient[],
+  account?: string,
+  template?: string,
+  messageParameter?: string,
+  date?: string,
+  time?: string
+): Promise<WhatsAppTemplateBatchResult> {
+  if (!recipients.length) return { results: [] };
+  if (!isNextSmsWhatsAppConfigured()) {
+    throw new Error(
+      "NextSMS WhatsApp requires an API token, active WhatsApp account, and approved template."
+    );
+  }
+
+  const normalized = recipients.map((recipient) => {
+    const destination = normalizePhone(recipient.to);
+    if (!/^\d{12}$/.test(destination)) {
+      throw new Error(`Invalid Tanzania WhatsApp phone number: ${recipient.to}`);
+    }
+    if (!recipient.personalisationValue.trim()) {
+      throw new Error(`Personalisation value is empty for ${recipient.to}`);
+    }
+    return {
+      ...recipient,
+      destination,
+    };
+  });
+
+  const parameter = messageParameter || config.nextsms.whatsappMessageParameter;
+  if (!parameter) {
+    throw new Error("NextSMS WhatsApp template parameter name is not configured.");
+  }
+
+  const publicImageUrl = (imageUrl?: string): string | undefined => {
+    if (!imageUrl) return undefined;
+    if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+    if (imageUrl.startsWith("/") && config.origin) {
+      return `${config.origin.replace(/\/$/, "")}${imageUrl}`;
+    }
+    return undefined;
+  };
+
+  const payload: Record<string, unknown> = {
+    account: account || config.nextsms.whatsappAccount,
+    template: template || config.nextsms.whatsappTemplate,
+    to: normalized.map((recipient) => Number(recipient.destination)),
+    personalisation: normalized.map((recipient) => ({
+      [parameter]: recipient.personalisationValue,
+    })),
+  };
+
+  const images = normalized.map((recipient) => recipient.imageUrl).filter(Boolean);
+  if (images.length === normalized.length) {
+    payload.header = {
+      images: normalized.map((recipient) => {
+        const file = publicImageUrl(recipient.imageUrl);
+        if (!file) throw new Error(`Invitation card URL is not publicly accessible: ${recipient.to}`);
+        return { file, name: "" };
+      }),
+    };
+  } else if (images.length > 0) {
+    throw new Error("Every WhatsApp recipient must have a public PNG or JPEG invitation card.");
+  }
+
+  if (date && time) {
+    payload.date = date;
+    payload.time = time;
+  }
+
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/whatsapp/v2/text/single`,
+      payload,
+      { headers: headers(), timeout: 30_000 }
+    );
+
+    const raw: Array<{
+      to: string | number;
+      messageId?: number | string;
+      status?: { groupName?: string; name?: string };
+      message?: string;
+    }> = res.data?.messages ?? [];
+
+    const results = normalized.map((recipient, index): SMSResult => {
+      const r = raw[index];
+      const groupName = String(r?.status?.groupName ?? "").toUpperCase();
+      const statusName = String(r?.status?.name ?? "").toUpperCase();
+      const messageId = r?.messageId === undefined || r?.messageId === null
+        ? ""
+        : String(r.messageId);
+      const failed =
+        !r ||
+        !messageId ||
+        groupName === "REJECTED" ||
+        statusName.includes("FAIL") ||
+        statusName.includes("REJECTED");
+
+      return {
+        to: recipient.to,
+        dest: recipient.destination,
+        messageId,
+        status: failed ? "FAILED" : "SENT",
+        ...(failed
+          ? { error: statusName || "NextSMS returned no accepted WhatsApp delivery result" }
+          : {}),
+      };
+    });
+
+    return { results };
+  } catch (err) {
+    const axErr = err as AxiosError;
+    const detail = axErr.response?.data
+      ? JSON.stringify(axErr.response.data)
+      : axErr.message;
+    throw new Error(`NextSMS WhatsApp request failed: ${detail}`);
+  }
+}
+
 export async function testWhatsAppTemplate(
   to: string,
   personalisationValue: string,
