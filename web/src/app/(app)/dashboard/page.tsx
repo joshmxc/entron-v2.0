@@ -64,7 +64,7 @@ export default function DashboardPage() {
   const sparkData = [12, 28, 18, 45, 32, 55, 41, checkedIn > 0 ? Math.min(checkedIn, 80) : 20];
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="mx-auto w-full max-w-[1800px] space-y-5">
       {/* Welcome bar */}
       <div className="flex items-center justify-between">
         <div>
@@ -85,7 +85,7 @@ export default function DashboardPage() {
       {/* No event warning */}
       {!activeEvent && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl border"
-          style={{ backgroundColor: "rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.3)", color: "#92400e" }}>
+          style={{ backgroundColor: "rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.3)", color: "var(--text)" }}>
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <p className="text-sm">Select an event from Events to see stats.</p>
           <Link href="/events" className="ml-auto text-xs font-semibold underline underline-offset-2">Go</Link>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-3 xs:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         <StatCard label="Total Guests" value={total.toLocaleString()} icon={Users} iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
         <StatCard label="Check-ins Today" value={checkedIn.toLocaleString()}
           sub={`${attendance}% of guests`}
@@ -124,9 +124,9 @@ export default function DashboardPage() {
       )}
 
       {/* Two columns */}
-      <div className="grid lg:grid-cols-3 gap-5">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
         {/* Recent scans */}
-        <div className="lg:col-span-2 card space-y-3">
+        <div className="min-w-0 lg:col-span-2 xl:col-span-4 2xl:col-span-5 card space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-sm flex items-center gap-2" style={{ color: "var(--text)" }}>
               <span className="w-2 h-2 bg-entron-blue rounded-full animate-pulse" />
@@ -168,7 +168,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right panel */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4 xl:col-span-1 2xl:col-span-1">
           {/* Scan Now */}
           <div className="card space-y-3">
             <div className="w-10 h-10 bg-entron-blue/10 rounded-xl flex items-center justify-center"><ScanLine className="w-5 h-5 text-entron-blue" /></div>
