@@ -77,7 +77,7 @@ export async function exportList(req: Request, res: Response) {
     { header: "Phone", key: "phone", width: 18 },
     { header: "Guest Type", key: "guestType", width: 14 },
     { header: "Unique ID", key: "uniqueId", width: 16 },
-    { header: "QR Code", key: "qrCode", width: 18 },
+    { header: "QR Code", key: "qrCode", width: 20 },
   ];
 
   const headerRow = worksheet.getRow(1);
@@ -100,13 +100,19 @@ export async function exportList(req: Request, res: Response) {
       uniqueId: guest.uniqueCode,
       qrCode: "",
     });
-    row.height = 82;
+    row.height = 96;
     row.eachCell((cell) => {
       cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
     });
     worksheet.getCell(`C${rowNumber}`).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
     worksheet.getCell(`D${rowNumber}`).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
     worksheet.getCell(`E${rowNumber}`).alignment = { vertical: "middle", horizontal: "center" };
+    worksheet.getCell(`E${rowNumber}`).border = {
+      top: { style: "thin", color: { argb: "FFD1D5DB" } },
+      left: { style: "thin", color: { argb: "FFD1D5DB" } },
+      bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
+      right: { style: "thin", color: { argb: "FFD1D5DB" } },
+    };
 
     const qrDataUrl = await generateQRDataUrl(guest.qrCode);
     const qrImageId = workbook.addImage({
@@ -114,7 +120,15 @@ export async function exportList(req: Request, res: Response) {
       extension: "png",
     });
     worksheet.addImage(qrImageId, {
-      tl: { col: 4, row: rowNumber - 1 },
+      editAs: "oneCell",
+      tl: {
+        col: 4,
+        row: rowNumber - 1,
+        nativeCol: 4,
+        nativeColOff: 64000,
+        nativeRow: rowNumber - 1,
+        nativeRowOff: 110000,
+      },
       ext: { width: 72, height: 72 },
     });
   }
