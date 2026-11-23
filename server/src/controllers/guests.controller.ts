@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import * as guestsService from "../services/guests.service";
-import * as XLSX from "xlsx";
 import { ImportOptions, previewGuestExcel } from "../lib/excel";
 import { prisma } from "../lib/prisma";
 import { createSignedUpload, deleteStoredFile, readStoredFile, storeFile } from "../lib/storage";
+import ExcelJS from "exceljs";
+import { generateQRDataUrl } from "../lib/qrcode";
 
 const excelContentTypes: Record<string, string[]> = {
   ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
@@ -65,17 +66,60 @@ export async function list(req: Request, res: Response) {
 
 export async function exportList(req: Request, res: Response) {
   const guests = await guestsService.exportGuests(req.params.eventId);
-  const rows = guests.map((guest) => ({
-    "Full Name": `${guest.firstName} ${guest.lastName}`.trim(),
-    Phone: guest.phone ?? "",
-    "Guest Type": guest.guestType,
-    "Unique ID": guest.uniqueCode,
-  }));
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet([["Full Name", "Phone", "Guest Type", "Unique ID"]]);
-  XLSX.utils.sheet_add_json(worksheet, rows, { skipHeader: true, origin: "A2" });
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Guests");
-  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Entron";
+  const worksheet = workbook.addWorksheet("Guests", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+
+  worksheet.columns = [
+    { header: "Full Name", key: "fullName", width: 28 },
+    { header: "Phone", key: "phone", width: 18 },
+    { header: "Guest Type", key: "guestType", width: 14 },
+    { header: "Unique ID", key: "uniqueId", width: 16 },
+    { header: "QR Code", key: "qrCode", width: 18 },
+  ];
+
+  const headerRow = worksheet.getRow(1);
+  headerRow.height = 24;
+  headerRow.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  });
+
+  worksheet.autoFilter = { from: "A1", to: "E1" };
+
+  for (let index = 0; index < guests.length; index++) {
+    const guest = guests[index];
+    const rowNumber = index + 2;
+    const row = worksheet.addRow({
+      fullName: `${guest.firstName} ${guest.lastName}`.trim(),
+      phone: guest.phone ?? "",
+      guestType: guest.guestType,
+      uniqueId: guest.uniqueCode,
+      qrCode: "",
+    });
+    row.height = 82;
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    });
+    worksheet.getCell(`C${rowNumber}`).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    worksheet.getCell(`D${rowNumber}`).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+    worksheet.getCell(`E${rowNumber}`).alignment = { vertical: "middle", horizontal: "center" };
+
+    const qrDataUrl = await generateQRDataUrl(guest.qrCode);
+    const qrImageId = workbook.addImage({
+      base64: qrDataUrl,
+      extension: "png",
+    });
+    worksheet.addImage(qrImageId, {
+      tl: { col: 4, row: rowNumber - 1 },
+      ext: { width: 72, height: 72 },
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
 
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="event-${req.params.eventId}-guests.xlsx"`);

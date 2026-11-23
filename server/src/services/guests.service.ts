@@ -119,6 +119,7 @@ export async function exportGuests(eventId: string) {
       phone: true,
       guestType: true,
       uniqueCode: true,
+      qrCode: true,
     },
   });
 }
