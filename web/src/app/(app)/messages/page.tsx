@@ -26,6 +26,8 @@ interface Guest {
   isCheckedIn?: boolean;
   admissionsUsed?: number;
   tableNumber?: string | null;
+  sentSms?: boolean;
+  sentWhatsapp?: boolean;
 }
 interface Message { id: string; phone: string; body: string; channel: string; status: string; createdAt: string; sender: { name: string } }
 
@@ -101,6 +103,25 @@ export default function MessagesPage() {
   const charactersPerSms = encodingUnicode ? 70 : 160;
   const smsPages = Math.ceil(message.length / charactersPerSms) || 1;
 
+  const availableGuests = useMemo(() => {
+    const seenPhones = new Set<string>();
+    return guests.filter((guest) => {
+      if (!guest.phone) return false;
+      const digits = guest.phone.replace(/\D/g, "");
+      const normalized = digits.startsWith("255")
+        ? digits
+        : digits.startsWith("0") && digits.length === 10
+          ? `255${digits.slice(1)}`
+          : digits.length === 9 ? `255${digits}` : digits;
+      if (seenPhones.has(normalized)) return false;
+      if (channel === "SMS" && guest.sentSms) return false;
+      if (channel === "WHATSAPP" && guest.sentWhatsapp) return false;
+      if (channel === "BOTH" && guest.sentSms && guest.sentWhatsapp) return false;
+      seenPhones.add(normalized);
+      return true;
+    });
+  }, [guests, channel]);
+
   const runWhatsAppAnalysis = async () => {
     setAnalysisVisible(true);
     const phone = previewGuest?.phone;
@@ -125,18 +146,18 @@ export default function MessagesPage() {
     }
   };
 
-  const filtered = useMemo(() => guests.filter((g) => {
+  const filtered = useMemo(() => availableGuests.filter((g) => {
     const q = search.toLowerCase();
     return !q || `${g.firstName} ${g.lastName} ${g.phone ?? ""}`.toLowerCase().includes(q);
-  }), [guests, search]);
+  }), [availableGuests, search]);
 
   const resolvedIds = useMemo(() => {
-    if (recipientMode === "all") return guests.map((g) => g.id);
-    if (recipientMode === "type") return guests.filter((g) => selectedTypes.has(g.guestType)).map((g) => g.id);
-    return Array.from(selectedIds);
-  }, [recipientMode, guests, selectedTypes, selectedIds]);
+    if (recipientMode === "all") return availableGuests.map((g) => g.id);
+    if (recipientMode === "type") return availableGuests.filter((g) => selectedTypes.has(g.guestType)).map((g) => g.id);
+    return Array.from(selectedIds).filter((id) => availableGuests.some((guest) => guest.id === id));
+  }, [recipientMode, availableGuests, selectedTypes, selectedIds]);
 
-  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
+  const previewGuest = availableGuests.find((guest) => resolvedIds.includes(guest.id));
   const previewName = previewGuest
     ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
     : "{var1}";
@@ -291,7 +312,7 @@ export default function MessagesPage() {
               <Users className="w-4 h-4 text-entron-blue" /> Recipients
             </h2>
             <div className="flex gap-2 flex-wrap">
-              {([["all", `All (${guests.length})`], ["type", "By Type"], ["select", "Pick"]] as [string, string][]).map(([mode, label]) => (
+              {([["all", `All (${availableGuests.length})`], ["type", "By Type"], ["select", "Pick"]] as [string, string][]).map(([mode, label]) => (
                 <button key={mode} onClick={() => setRecipientMode(mode as typeof recipientMode)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${recipientMode === mode ? "border-entron-blue bg-entron-blue/10 text-entron-blue" : "border-entron-dark-border text-slate-400"}`}>
                   {label}
@@ -302,7 +323,7 @@ export default function MessagesPage() {
             {recipientMode === "type" && (
               <div className="flex flex-wrap gap-2">
                 {(["SINGLE", "DOUBLE", "FAMILY", "VIP"] as GuestType[]).map((type) => {
-                  const count = guests.filter((g) => g.guestType === type).length;
+                  const count = availableGuests.filter((g) => g.guestType === type).length;
                   return (
                     <button key={type} onClick={() => toggleType(type)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedTypes.has(type) ? "border-entron-blue bg-entron-blue/10 text-entron-blue" : "border-entron-dark-border text-slate-400"}`}>

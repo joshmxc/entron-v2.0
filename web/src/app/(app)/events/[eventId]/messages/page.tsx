@@ -37,6 +37,8 @@ interface Guest {
   cardUrl?: string;
   uniqueCode?: string;
   isCheckedIn?: boolean;
+  sentSms?: boolean;
+  sentWhatsapp?: boolean;
 }
 interface Message { id: string; phone: string; body: string; channel: string; status: string; createdAt: string; sender: { name: string } }
 
@@ -90,21 +92,40 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
   const activeWhatsappTemplate = whatsappTemplate || smsStatus?.whatsappTemplate || whatsappTemplates[0] || "";
 
+  const availableGuests = useMemo(() => {
+    const seenPhones = new Set<string>();
+    return guests.filter((guest) => {
+      if (!guest.phone) return false;
+      const digits = guest.phone.replace(/\D/g, "");
+      const normalized = digits.startsWith("255")
+        ? digits
+        : digits.startsWith("0") && digits.length === 10
+          ? `255${digits.slice(1)}`
+          : digits.length === 9 ? `255${digits}` : digits;
+      if (seenPhones.has(normalized)) return false;
+      if (channel === "SMS" && guest.sentSms) return false;
+      if (channel === "WHATSAPP" && guest.sentWhatsapp) return false;
+      if (channel === "BOTH" && guest.sentSms && guest.sentWhatsapp) return false;
+      seenPhones.add(normalized);
+      return true;
+    });
+  }, [guests, channel]);
+
   // ── Filtered guest list ──
   const filtered = useMemo(() => {
-    return guests.filter((g) => {
+    return availableGuests.filter((g) => {
       const q = search.toLowerCase();
       return !q || `${g.firstName} ${g.lastName} ${g.phone ?? ""}`.toLowerCase().includes(q);
     });
-  }, [guests, search]);
+  }, [availableGuests, search]);
 
   const resolvedIds = useMemo(() => {
-    if (recipientMode === "all") return guests.map((g) => g.id);
-    if (recipientMode === "type") return guests.filter((g) => selectedTypes.has(g.guestType)).map((g) => g.id);
-    return Array.from(selectedIds);
-  }, [recipientMode, guests, selectedTypes, selectedIds]);
+    if (recipientMode === "all") return availableGuests.map((g) => g.id);
+    if (recipientMode === "type") return availableGuests.filter((g) => selectedTypes.has(g.guestType)).map((g) => g.id);
+    return Array.from(selectedIds).filter((id) => availableGuests.some((guest) => guest.id === id));
+  }, [recipientMode, availableGuests, selectedTypes, selectedIds]);
 
-  const guestsWithPhone = guests.filter((g) => g.phone).length;
+  const guestsWithPhone = availableGuests.length;
   const smsBalance: { balance: number; display: string; channel: string; smsCount: number; whatsappCount: number } | null = balanceData?.data ?? null;
 
   const toggleType = (t: GuestType) => setSelectedTypes((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; });
@@ -137,7 +158,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   const charCount = message.length;
   const encodingUnicode = /[^\\x00-\\x7F]/.test(message);
   const smsPages = Math.ceil(charCount / (encodingUnicode ? 70 : 160)) || 1;
-  const previewGuest = guests.find((guest) => resolvedIds.includes(guest.id));
+  const previewGuest = availableGuests.find((guest) => resolvedIds.includes(guest.id));
   const previewName = previewGuest
     ? `${previewGuest.firstName} ${previewGuest.lastName}`.trim()
     : "{var1}";
@@ -185,7 +206,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         </Link>
         <h1 className="page-title flex-1">Messages</h1>
         <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span>{guestsWithPhone}/{guests.length} with phone</span>
+          <span>{guestsWithPhone}/{guests.length} available with phone</span>
           {smsBalance && (
             <span className="badge badge-green">
               SMS: {smsBalance.display} · {(smsBalance.smsCount ?? 0).toLocaleString()} SMS · {(smsBalance.whatsappCount ?? 0).toLocaleString()} WhatsApp
@@ -298,7 +319,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
             </h2>
             <div className="flex gap-2 flex-wrap">
               {[
-                { mode: "all",    label: `All Guests (${guests.length})` },
+                { mode: "all",    label: `All Guests (${availableGuests.length})` },
                 { mode: "type",   label: "By Type" },
                 { mode: "select", label: "Pick Individually" },
               ].map(({ mode, label }) => (
@@ -313,7 +334,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
             {recipientMode === "type" && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {(["SINGLE", "DOUBLE", "FAMILY", "VIP"] as GuestType[]).map((t) => {
-                  const count = guests.filter((g) => g.guestType === t).length;
+                  const count = availableGuests.filter((g) => g.guestType === t).length;
                   return (
                     <button key={t} onClick={() => toggleType(t)}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedTypes.has(t) ? "border-entron-blue bg-entron-blue/10 text-entron-blue" : "border-entron-dark-border text-slate-400"}`}>

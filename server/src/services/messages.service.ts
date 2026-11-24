@@ -71,6 +71,43 @@ export async function sendBulkMessages(opts: {
   const withPhone = guests.filter((g) => g.phone);
   const noPhone   = guests.filter((g) => !g.phone);
 
+  const normalizePhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("255") && digits.length >= 12) return digits;
+    if (digits.startsWith("0") && digits.length === 10) return `255${digits.slice(1)}`;
+    if (digits.length === 9 && /^[67]/.test(digits)) return `255${digits}`;
+    return digits;
+  };
+
+  const sentRecords = await prisma.outboundMessage.findMany({
+    where: {
+      status: "SENT",
+      channel: { in: ["SMS", "WHATSAPP"] },
+      phone: { in: withPhone.map((guest) => guest.phone!).filter(Boolean) },
+    },
+    select: { phone: true, channel: true },
+  });
+  const sentSmsPhones = new Set(sentRecords.filter((item) => item.channel === "SMS").map((item) => normalizePhone(item.phone)));
+  const sentWhatsappPhones = new Set(sentRecords.filter((item) => item.channel === "WHATSAPP").map((item) => normalizePhone(item.phone)));
+
+  const smsRecipients = withPhone
+    .filter((guest) => !sentSmsPhones.has(normalizePhone(guest.phone!)))
+    .filter((guest, index, list) => list.findIndex((item) => normalizePhone(item.phone!) === normalizePhone(guest.phone!)) === index);
+  const whatsappRecipients = withPhone
+    .filter((guest) => !sentWhatsappPhones.has(normalizePhone(guest.phone!)))
+    .filter((guest, index, list) => list.findIndex((item) => normalizePhone(item.phone!) === normalizePhone(guest.phone!)) === index);
+
+  for (const guest of smsRecipients) {
+    if ((channel === "SMS" || channel === "BOTH") && sentSmsPhones.has(normalizePhone(guest.phone!))) {
+      results.failed++;
+      results.details.push({ name: `${guest.firstName} ${guest.lastName}`, phone: guest.phone!, status: "Already received SMS", channel: "SMS" });
+    }
+    if ((channel === "WHATSAPP" || channel === "BOTH") && sentWhatsappPhones.has(normalizePhone(guest.phone!))) {
+      results.failed++;
+      results.details.push({ name: `${guest.firstName} ${guest.lastName}`, phone: guest.phone!, status: "Already received WhatsApp", channel: "WHATSAPP" });
+    }
+  }
+
   // Record failures for guests without phone
   noPhone.forEach((g) => {
     results.failed++;
@@ -78,9 +115,9 @@ export async function sendBulkMessages(opts: {
   });
 
   // ── SMS via Next SMS (messaging-service.co.tz) ───────────────────────────
-  if ((channel === "SMS" || channel === "BOTH") && withPhone.length > 0) {
+  if ((channel === "SMS" || channel === "BOTH") && smsRecipients.length > 0) {
     try {
-      const smsPayload = withPhone.map((g) => ({
+      const smsPayload = smsRecipients.map((g) => ({
         to:   g.phone!,
         text: personalize(message, g),
       }));
@@ -89,8 +126,8 @@ export async function sendBulkMessages(opts: {
       const bulkResult = await nextSmsBulk(smsPayload, reference, senderId);
 
       // Persist each result to DB and tally
-      for (let i = 0; i < withPhone.length; i++) {
-        const guest   = withPhone[i];
+      for (let i = 0; i < smsRecipients.length; i++) {
+        const guest   = smsRecipients[i];
         const r       = bulkResult.results[i];
         const body    = smsPayload[i].text;
         const succeeded = r?.status === "SENT";
@@ -117,7 +154,7 @@ export async function sendBulkMessages(opts: {
     } catch (err) {
       console.error("[NextSMS] Bulk send error:", err);
       // Entire batch failed — mark all as failed
-      for (const guest of withPhone) {
+      for (const guest of smsRecipients) {
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body: personalize(message, guest), channel: "SMS", status: "FAILED" },
         });
@@ -128,8 +165,8 @@ export async function sendBulkMessages(opts: {
   }
 
   // ── WhatsApp: NextSMS accepts template messages per recipient ─────────
-  if (channel === "WHATSAPP" || channel === "BOTH") {
-    for (const guest of withPhone) {
+  if ((channel === "WHATSAPP" || channel === "BOTH") && whatsappRecipients.length > 0) {
+    for (const guest of whatsappRecipients) {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest);
       let cardUrl = guest.invitations[0]?.cardUrl;
@@ -208,7 +245,7 @@ export async function listMessages(eventId: string, page = 1, pageSize = 50) {
 }
 
 export async function getEventGuests(eventId: string) {
-  return prisma.guest.findMany({
+  const guests = await prisma.guest.findMany({
     where: { eventId },
     select: {
       id: true,
@@ -224,6 +261,32 @@ export async function getEventGuests(eventId: string) {
     },
     orderBy: { lastName: "asc" },
   });
+
+  const normalizePhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("255") && digits.length >= 12) return digits;
+    if (digits.startsWith("0") && digits.length === 10) return `255${digits.slice(1)}`;
+    if (digits.length === 9 && /^[67]/.test(digits)) return `255${digits}`;
+    return digits;
+  };
+
+  const sent = await prisma.outboundMessage.findMany({
+    where: {
+      status: "SENT",
+      channel: { in: ["SMS", "WHATSAPP"] },
+      phone: { in: guests.map((guest) => guest.phone).filter((phone): phone is string => !!phone) },
+    },
+    select: { phone: true, channel: true },
+  });
+
+  const sentSmsPhones = new Set(sent.filter((item) => item.channel === "SMS").map((item) => normalizePhone(item.phone)));
+  const sentWhatsappPhones = new Set(sent.filter((item) => item.channel === "WHATSAPP").map((item) => normalizePhone(item.phone)));
+
+  return guests.map((guest) => ({
+    ...guest,
+    sentSms: !!guest.phone && sentSmsPhones.has(normalizePhone(guest.phone)),
+    sentWhatsapp: !!guest.phone && sentWhatsappPhones.has(normalizePhone(guest.phone)),
+  }));
 }
 
 export { getSMSBalance };
