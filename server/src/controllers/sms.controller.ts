@@ -22,7 +22,6 @@ import {
 } from "../lib/nextsms";
 import { config } from "../config";
 import { prisma } from "../lib/prisma";
-import { generateCards } from "../services/invitations.service";
 
 // ── GET /sms/status ───────────────────────────────────────────────────────────
 /**
@@ -253,15 +252,9 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
         },
       });
       testImageUrl = guest?.invitations[0]?.cardUrl || guest?.qrImageUrl;
-      if (!testImageUrl) {
-        await generateCards(eventId, null, [guestId]);
-        const invitation = await prisma.guestInvitation.findFirst({
-          where: { guestId },
-          orderBy: { createdAt: "desc" },
-          select: { cardUrl: true },
-        });
-        testImageUrl = invitation?.cardUrl;
-      }
+    }
+    if (includeImageHeader && !testImageUrl) {
+      throw new Error("The selected guest does not have a public card or QR image URL.");
     }
     const data = await testWhatsAppTemplate(
       phone,

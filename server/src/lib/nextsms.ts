@@ -344,6 +344,16 @@ export async function testWhatsAppTemplate(
   }
 
   const destination = normalizePhone(to);
+  const publicImageUrl = imageUrl
+    ? /^https?:\/\//i.test(imageUrl)
+      ? imageUrl
+      : imageUrl.startsWith("/")
+        ? `${config.origin.replace(/\/$/, "")}${imageUrl}`
+        : undefined
+    : undefined;
+  if (imageUrl && !publicImageUrl) {
+    throw new Error("WhatsApp image header must be a public HTTPS URL.");
+  }
   const payload: Record<string, unknown> = {
     account: account || config.nextsms.whatsappAccount,
     template: template || config.nextsms.whatsappTemplate,
@@ -352,8 +362,8 @@ export async function testWhatsAppTemplate(
       { [messageParameter || config.nextsms.whatsappMessageParameter]: personalisationValue },
     ],
   };
-  if (imageUrl) {
-    payload.header = { image: { file: imageUrl, name: "" } };
+  if (publicImageUrl) {
+    payload.header = { image: { file: publicImageUrl, name: "" } };
   }
 
   const res = await axios.post(
