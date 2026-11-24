@@ -38,11 +38,12 @@ export async function sendBulkMessages(opts: {
   whatsappAccount?: string;
   whatsappTemplate?: string;
   whatsappMessageParameter?: string;
+  whatsappHeaderImage?: boolean;
   date?: string;
   time?: string;
   sentBy: string;
 }) {
-  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, date, time, sentBy } = opts;
+  const { guestIds, message, channel, senderId, whatsappAccount, whatsappTemplate, whatsappMessageParameter, whatsappHeaderImage, date, time, sentBy } = opts;
   const results = {
     sent: 0,
     failed: 0,
@@ -131,7 +132,7 @@ export async function sendBulkMessages(opts: {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest);
       let cardUrl = guest.invitations[0]?.cardUrl;
-      if (!cardUrl) {
+      if (whatsappHeaderImage && !cardUrl) {
         await generateCards(opts.eventId, null, [guest.id]);
         const invitation = await prisma.guestInvitation.findFirst({
           where: { guestId: guest.id },
@@ -140,7 +141,7 @@ export async function sendBulkMessages(opts: {
         });
         cardUrl = invitation?.cardUrl;
       }
-      if (!cardUrl) {
+      if (whatsappHeaderImage && !cardUrl) {
         await prisma.outboundMessage.create({
           data: { sentBy, phone: guest.phone!, body, channel: "WHATSAPP", status: "FAILED" },
         });
@@ -160,7 +161,7 @@ export async function sendBulkMessages(opts: {
           whatsappAccount,
           whatsappTemplate,
           whatsappMessageParameter,
-          guest.invitations[0]?.cardUrl ?? undefined,
+          whatsappHeaderImage ? cardUrl : undefined,
           date,
           time
         );

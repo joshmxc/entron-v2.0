@@ -92,6 +92,7 @@ export default function MessagesPage() {
   const activeSenderId = senderId || smsStatus?.senderId || senderIds[0] || "";
   const [whatsappAccount, setWhatsappAccount] = useState("");
   const [whatsappTemplate, setWhatsappTemplate] = useState("");
+  const [whatsappHeaderImage, setWhatsappHeaderImage] = useState(smsStatus?.whatsappHeaderImage ?? false);
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
@@ -114,6 +115,7 @@ export default function MessagesPage() {
         template: activeWhatsappTemplate,
         parameter: smsStatus?.whatsappMessageParameter || "var1",
         imageUrl: previewGuest?.cardUrl,
+        includeImageHeader: whatsappHeaderImage,
       });
       setWhatsappTestResult(res.data.data);
     } finally {
@@ -146,10 +148,6 @@ export default function MessagesPage() {
       .replace(/\{\{uniqueId\}\}|\{\{uniqueCode\}\}/g, previewGuest?.uniqueCode || "")
       .replace(/\{\{status\}\}/g, previewGuest?.isCheckedIn ? "Checked In" : "Waiting")
     : previewName;
-  const whatsappPreviewBody = activeWhatsappTemplate === "weddinginvitation"
-    ? `Habari ${whatsappPersonalisation},\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapo chini`
-    : `Habari ${whatsappPersonalisation} ,\nTafadhali thibitisha kama utahudhuria kwa kuchagua mojawapo ya chaguo hapa chini`;
-
   const toggleType = (t: GuestType) => setSelectedTypes((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; });
   const toggleGuest = (id: string) => setSelectedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -166,6 +164,7 @@ export default function MessagesPage() {
         whatsappAccount: channel === "SMS" ? undefined : activeWhatsappAccount,
         whatsappTemplate: channel === "SMS" ? undefined : activeWhatsappTemplate,
         whatsappMessageParameter: smsStatus?.whatsappMessageParameter || "var1",
+        whatsappHeaderImage,
         date: scheduleDate || undefined,
         time: scheduleTime || undefined,
       });
@@ -261,6 +260,15 @@ export default function MessagesPage() {
                   <label className="text-xs text-slate-400">Destination Country <span className="text-red-400">*</span></label>
                   <input value="Tanzania" readOnly className="w-full text-sm bg-slate-800/60" />
                 </div>
+                <label className="flex items-center gap-2 text-xs text-slate-300 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={whatsappHeaderImage}
+                    onChange={(event) => setWhatsappHeaderImage(event.target.checked)}
+                    className="accent-green-500"
+                  />
+                  Template has an image header
+                </label>
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-400">Schedule Date</label>
                   <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="w-full text-sm" />
@@ -348,7 +356,7 @@ export default function MessagesPage() {
                   )}
                 </div>
                 <div className="mx-auto max-w-sm rounded-lg bg-[#1f2c27] border border-white/5 p-3 shadow-lg">
-                  {previewGuest?.cardUrl && (
+                  {whatsappHeaderImage && previewGuest?.cardUrl && (
                     <img
                       src={previewGuest.cardUrl}
                       alt={`Invitation card for ${previewGuest.firstName} ${previewGuest.lastName}`}
@@ -356,20 +364,12 @@ export default function MessagesPage() {
                     />
                   )}
                   <p className="whitespace-pre-line text-sm leading-relaxed text-slate-100">
-                    {whatsappPreviewBody}
+                    {whatsappPersonalisation}
                   </p>
                   <div className="mt-1 flex justify-end text-[10px] text-slate-400">08:25 ✓✓</div>
-                  <div className="mt-3 space-y-1.5 border-t border-white/5 pt-2">
-                    <button type="button" className="w-full rounded-md py-2 text-sm text-green-400">
-                      Nitahudhuria
-                    </button>
-                    <button type="button" className="w-full border-t border-white/5 py-2 text-sm text-green-400">
-                      Sitahudhuria
-                    </button>
-                  </div>
                 </div>
                 <p className="text-xs text-slate-500">
-                  Image header uses this guest’s generated PNG/JPEG invitation card. The approved quick-reply buttons are included exactly as shown above.
+                  Template header and buttons are sent only as configured by NextSMS. This preview shows the personalised placeholder value only.
                 </p>
                 {whatsappTestResult?.message && (
                   <p className="text-xs text-green-400">

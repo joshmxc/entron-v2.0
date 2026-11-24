@@ -45,6 +45,7 @@ export async function getStatus(_req: Request, res: Response): Promise<void> {
       whatsappTemplate: config.nextsms.whatsappTemplate,
       whatsappTemplates: config.nextsms.whatsappTemplates,
       whatsappMessageParameter: config.nextsms.whatsappMessageParameter,
+      whatsappHeaderImage: config.nextsms.whatsappHeaderImage,
     },
   });
 }
@@ -222,13 +223,14 @@ export async function getBalance(_req: Request, res: Response): Promise<void> {
 }
 
 export async function testWhatsApp(req: Request, res: Response): Promise<void> {
-  const { phone, personalisation, account, template, parameter, imageUrl } = req.body as {
+  const { phone, personalisation, account, template, parameter, imageUrl, includeImageHeader } = req.body as {
     phone?: string;
     personalisation?: string;
     account?: string;
     template?: string;
     parameter?: string;
     imageUrl?: string;
+    includeImageHeader?: boolean;
   };
 
   if (!phone || !personalisation) {
@@ -237,7 +239,14 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
   }
 
   try {
-    const data = await testWhatsAppTemplate(phone, personalisation, account, template, parameter, imageUrl);
+    const data = await testWhatsAppTemplate(
+      phone,
+      personalisation,
+      account,
+      template,
+      parameter,
+      includeImageHeader ? imageUrl : undefined
+    );
     res.json({ success: true, data });
   } catch (err) {
     res.status(502).json({
