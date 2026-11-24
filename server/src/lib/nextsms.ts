@@ -294,7 +294,15 @@ export async function sendWhatsAppMessage(
     ],
   };
   if (imageUrl) {
-    payload.header = { image: { file: imageUrl, name: "" } };
+    const publicImageUrl = /^https?:\/\//i.test(imageUrl)
+      ? imageUrl
+      : imageUrl.startsWith("/")
+        ? `${config.origin.replace(/\/$/, "")}${imageUrl}`
+        : undefined;
+    if (!publicImageUrl) {
+      throw new Error("WhatsApp image header must be a public HTTPS URL.");
+    }
+    payload.header = { image: { file: publicImageUrl, name: "" } };
   }
   if (date && time) {
     payload.date = date;

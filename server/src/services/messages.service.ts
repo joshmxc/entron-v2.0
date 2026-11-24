@@ -61,6 +61,7 @@ export async function sendBulkMessages(opts: {
       guestType: true,
       uniqueCode: true,
       isCheckedIn: true,
+      qrImageUrl: true,
       admissionsUsed: true,
       tableNumber: true,
       invitations: { orderBy: { createdAt: "desc" }, take: 1 },
@@ -132,6 +133,7 @@ export async function sendBulkMessages(opts: {
       await sleep(WHATSAPP_DELAY);
       const body = personalize(message, guest);
       let cardUrl = guest.invitations[0]?.cardUrl;
+      if (whatsappHeaderImage && !cardUrl) cardUrl = guest.qrImageUrl;
       if (whatsappHeaderImage && !cardUrl) {
         await generateCards(opts.eventId, null, [guest.id]);
         const invitation = await prisma.guestInvitation.findFirst({

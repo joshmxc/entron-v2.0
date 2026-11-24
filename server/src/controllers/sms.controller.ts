@@ -247,9 +247,12 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
     if (includeImageHeader && guestId && eventId) {
       const guest = await prisma.guest.findFirst({
         where: { id: guestId, eventId },
-        select: { invitations: { orderBy: { createdAt: "desc" }, take: 1, select: { cardUrl: true } } },
+        select: {
+          qrImageUrl: true,
+          invitations: { orderBy: { createdAt: "desc" }, take: 1, select: { cardUrl: true } },
+        },
       });
-      testImageUrl = guest?.invitations[0]?.cardUrl;
+      testImageUrl = guest?.invitations[0]?.cardUrl || guest?.qrImageUrl;
       if (!testImageUrl) {
         await generateCards(eventId, null, [guestId]);
         const invitation = await prisma.guestInvitation.findFirst({
