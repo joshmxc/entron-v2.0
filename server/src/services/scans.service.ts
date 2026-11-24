@@ -117,10 +117,11 @@ export async function processScan(
   if (welcomeSmsClaimed && guest.phone) {
     const guestName = `${guest.firstName} ${guest.lastName}`.trim();
     const body =
-      `Karibu ${guestName}! ` +
-      `Tunafurahi kukukaribisha kwenye Harusi ya ${guest.event.name}. ` +
-      `Tunakutakia muda mzuri wa kusherehekea pamoja nasi. ` +
-      `Uthibitisho wako wa kuingia kwenye tukio umekamilika. Karibu sana!`;
+      `💍 Karibu ${guestName}!\n\n` +
+      `Tunafurahi kukukaribisha kwenye Harusi ya ${guest.event.name}. ❤️ ` +
+      `Tunakutakia muda mzuri wa kusherehekea pamoja nasi. ✨\n\n` +
+      `✅ Uthibitisho wako wa kuingia kwenye tukio umekamilika.\n` +
+      `🥂 Karibu sana, na tufurahie pamoja!🎊`;
     try {
       await sleep(WELCOME_SMS_DELAY_MS);
       const sms = await sendSMS(guest.phone, body, "HARUSI");
