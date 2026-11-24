@@ -105,7 +105,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
   }, [recipientMode, guests, selectedTypes, selectedIds]);
 
   const guestsWithPhone = guests.filter((g) => g.phone).length;
-  const smsBalance: { balance: number; display: string; channel: string; smsCount: number } | null = balanceData?.data ?? null;
+  const smsBalance: { balance: number; display: string; channel: string; smsCount: number; whatsappCount: number } | null = balanceData?.data ?? null;
 
   const toggleType = (t: GuestType) => setSelectedTypes((s) => { const n = new Set(s); n.has(t) ? n.delete(t) : n.add(t); return n; });
   const toggleGuest = (id: string) => setSelectedIds((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -188,7 +188,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
           <span>{guestsWithPhone}/{guests.length} with phone</span>
           {smsBalance && (
             <span className="badge badge-green">
-              SMS: {smsBalance.display} · {(smsBalance.smsCount ?? 0).toLocaleString()} remaining
+              SMS: {smsBalance.display} · {(smsBalance.smsCount ?? 0).toLocaleString()} SMS · {(smsBalance.whatsappCount ?? 0).toLocaleString()} WhatsApp
             </span>
           )}
         </div>

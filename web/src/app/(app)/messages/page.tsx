@@ -189,7 +189,9 @@ export default function MessagesPage() {
             <span>
               SMS Balance: <strong className="text-slate-200">{smsBalance.display}</strong>
               {" · "}
-              Remaining: <strong className="text-slate-200">{(smsBalance.smsCount ?? 0).toLocaleString()} SMS</strong>
+              SMS: <strong className="text-slate-200">{(smsBalance.smsCount ?? 0).toLocaleString()}</strong>
+              {" · "}
+              WhatsApp: <strong className="text-slate-200">{(smsBalance.whatsappCount ?? 0).toLocaleString()}</strong>
             </span>
           </div>
         )}
