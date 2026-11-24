@@ -104,7 +104,7 @@ export const config = {
         .filter(Boolean)
     ),
     whatsappMessageParameter: optional("NEXTSMS_WHATSAPP_MESSAGE_PARAMETER", "var1"),
-    whatsappHeaderImage: optional("NEXTSMS_WHATSAPP_HEADER_IMAGE", "false").toLowerCase() === "true",
+    whatsappHeaderImage: optional("NEXTSMS_WHATSAPP_HEADER_IMAGE", "true").toLowerCase() === "true",
   },
 
   storage: {

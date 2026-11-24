@@ -21,6 +21,8 @@ import {
   isNextSmsWhatsAppConfigured,
 } from "../lib/nextsms";
 import { config } from "../config";
+import { prisma } from "../lib/prisma";
+import { generateCards } from "../services/invitations.service";
 
 // ── GET /sms/status ───────────────────────────────────────────────────────────
 /**
@@ -223,7 +225,7 @@ export async function getBalance(_req: Request, res: Response): Promise<void> {
 }
 
 export async function testWhatsApp(req: Request, res: Response): Promise<void> {
-  const { phone, personalisation, account, template, parameter, imageUrl, includeImageHeader } = req.body as {
+  const { phone, personalisation, account, template, parameter, imageUrl, includeImageHeader, eventId, guestId } = req.body as {
     phone?: string;
     personalisation?: string;
     account?: string;
@@ -231,6 +233,8 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
     parameter?: string;
     imageUrl?: string;
     includeImageHeader?: boolean;
+    eventId?: string;
+    guestId?: string;
   };
 
   if (!phone || !personalisation) {
@@ -239,13 +243,30 @@ export async function testWhatsApp(req: Request, res: Response): Promise<void> {
   }
 
   try {
+    let testImageUrl = imageUrl;
+    if (includeImageHeader && guestId && eventId) {
+      const guest = await prisma.guest.findFirst({
+        where: { id: guestId, eventId },
+        select: { invitations: { orderBy: { createdAt: "desc" }, take: 1, select: { cardUrl: true } } },
+      });
+      testImageUrl = guest?.invitations[0]?.cardUrl;
+      if (!testImageUrl) {
+        await generateCards(eventId, null, [guestId]);
+        const invitation = await prisma.guestInvitation.findFirst({
+          where: { guestId },
+          orderBy: { createdAt: "desc" },
+          select: { cardUrl: true },
+        });
+        testImageUrl = invitation?.cardUrl;
+      }
+    }
     const data = await testWhatsAppTemplate(
       phone,
       personalisation,
       account,
       template,
       parameter,
-      includeImageHeader ? imageUrl : undefined
+      includeImageHeader ? testImageUrl : undefined
     );
     res.json({ success: true, data });
   } catch (err) {

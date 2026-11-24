@@ -84,7 +84,7 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
       : [];
   const [whatsappAccount, setWhatsappAccount] = useState("");
   const [whatsappTemplate, setWhatsappTemplate] = useState("");
-  const [whatsappHeaderImage, setWhatsappHeaderImage] = useState(smsStatus?.whatsappHeaderImage ?? false);
+  const [whatsappHeaderImage, setWhatsappHeaderImage] = useState(smsStatus?.whatsappHeaderImage ?? true);
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const activeWhatsappAccount = whatsappAccount || smsStatus?.whatsappAccount || whatsappAccounts[0] || "";
@@ -167,6 +167,8 @@ export default function MessagesPage({ params }: { params: Promise<{ eventId: st
         parameter: smsStatus?.whatsappMessageParameter || "var1",
         imageUrl: previewGuest?.cardUrl,
         includeImageHeader: whatsappHeaderImage,
+        eventId,
+        guestId: previewGuest?.id,
       });
       setWhatsappTestResult(res.data.data);
     } finally {
