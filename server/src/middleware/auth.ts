@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../lib/jwt";
 import { prisma } from "../lib/prisma";
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     res.status(401).json({ success: false, error: "Missing token" });
@@ -10,7 +10,16 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
   const token = header.slice(7);
   try {
-    req.user = verifyAccessToken(token);
+    const jwtUser = verifyAccessToken(token);
+    const user = await prisma.user.findUnique({
+      where: { id: jwtUser.sub },
+      select: { id: true, role: true, name: true, isActive: true },
+    });
+    if (!user?.isActive) {
+      res.status(401).json({ success: false, error: "Account is inactive or unavailable" });
+      return;
+    }
+    req.user = { sub: user.id, role: user.role, name: user.name };
     void prisma.user.update({
       where: { id: req.user.sub },
       data: { lastSeenAt: new Date() },

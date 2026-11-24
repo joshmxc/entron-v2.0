@@ -176,16 +176,16 @@ export async function removeDuplicateGuests(eventId: string) {
   return { groups: groups.length, deleted: result.count };
 }
 
-export async function getGuest(id: string) {
+export async function getGuest(eventId: string, id: string) {
   const guest = await prisma.guest.findUnique({
-    where: { id },
+    where: { id, eventId },
     include: { scans: { include: { staff: { select: { name: true } } }, orderBy: { createdAt: "desc" } } },
   });
   if (!guest) throw { status: 404, message: "Guest not found" };
   return guest;
 }
 
-export async function updateGuest(id: string, data: Partial<{
+export async function updateGuest(eventId: string, id: string, data: Partial<{
   firstName: string;
   lastName: string;
   phone: string | null;
@@ -198,15 +198,19 @@ export async function updateGuest(id: string, data: Partial<{
   notes: string | null;
   custom: Record<string, string> | null;
 }>) {
+  const existing = await prisma.guest.findFirst({ where: { id, eventId }, select: { id: true } });
+  if (!existing) throw { status: 404, message: "Guest not found in this event" };
   return prisma.guest.update({ where: { id }, data: data as Parameters<typeof prisma.guest.update>[0]["data"] });
 }
 
-export async function deleteGuest(id: string) {
+export async function deleteGuest(eventId: string, id: string) {
+  const existing = await prisma.guest.findFirst({ where: { id, eventId }, select: { id: true } });
+  if (!existing) throw { status: 404, message: "Guest not found in this event" };
   await prisma.guest.delete({ where: { id } });
 }
 
-export async function regenerateQR(id: string) {
-  const guest = await prisma.guest.findUnique({ where: { id } });
+export async function regenerateQR(eventId: string, id: string) {
+  const guest = await prisma.guest.findFirst({ where: { id, eventId } });
   if (!guest) throw { status: 404, message: "Guest not found" };
 
   const qrCode = uuidv4();

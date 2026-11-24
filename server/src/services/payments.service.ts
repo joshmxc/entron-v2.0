@@ -13,6 +13,15 @@ export async function initiatePayment(data: {
   description?: string;
   initiatedBy?: string;
 }) {
+  const event = await prisma.event.findUnique({ where: { id: data.eventId }, select: { id: true } });
+  if (!event) throw { status: 404, message: "Event not found" };
+  if (data.guestId) {
+    const guest = await prisma.guest.findFirst({
+      where: { id: data.guestId, eventId: data.eventId },
+      select: { id: true },
+    });
+    if (!guest) throw { status: 404, message: "Guest not found in this event" };
+  }
   const paymentId = uuidv4();
   const payment = await prisma.payment.create({
     data: {
@@ -75,6 +84,10 @@ export async function handleMpesaCallback(body: Record<string, unknown>) {
 
   const payment = await prisma.payment.findFirst({ where: { externalRef: checkoutId } });
   if (!payment) return;
+  const amountItem = items?.find((i) => i.Name === "Amount");
+  if (typeof amountItem?.Value === "number" && Math.abs(Number(amountItem.Value) - Number(payment.amount)) > 0.01) {
+    throw { status: 400, message: "M-Pesa callback amount does not match the payment" };
+  }
 
   const status = resultCode === 0 ? "COMPLETED" : "FAILED";
   await prisma.payment.update({
@@ -90,6 +103,10 @@ export async function handleAirtelCallback(body: Record<string, unknown>) {
 
   const payment = await prisma.payment.findFirst({ where: { id: txn.id as string } });
   if (!payment) return;
+  const amount = Number(txn.amount);
+  if (Number.isFinite(amount) && Math.abs(amount - Number(payment.amount)) > 0.01) {
+    throw { status: 400, message: "Airtel callback amount does not match the payment" };
+  }
 
   const status = txn.status === "TS" ? "COMPLETED" : "FAILED";
   await prisma.payment.update({
@@ -114,6 +131,6 @@ export async function listPayments(eventId: string, page = 1, pageSize = 50) {
   return { data, total, page, pageSize, totalPages: Math.ceil(total / pageSize) };
 }
 
-export async function getPayment(id: string) {
-  return prisma.payment.findUnique({ where: { id } });
+export async function getPayment(eventId: string, id: string) {
+  return prisma.payment.findFirst({ where: { id, eventId } });
 }

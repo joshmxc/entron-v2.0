@@ -8,6 +8,14 @@ import * as ctrl from "../controllers/scans.controller";
 const router = Router();
 router.use(authenticate, requireStaff);
 router.use(async (req, res, next) => {
+  if (req.user!.role !== "ADMIN" && Array.isArray(req.body?.items)) {
+    for (const item of req.body.items) {
+      if (!item?.eventId || !await isEventAssignedToStaff(req.user!.sub, String(item.eventId))) {
+        res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });
+        return;
+      }
+    }
+  }
   const eventId = req.body?.eventId || req.query.eventId;
   if (req.user!.role !== "ADMIN" && eventId && !await isEventAssignedToStaff(req.user!.sub, String(eventId))) {
     res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });

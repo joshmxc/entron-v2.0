@@ -54,6 +54,7 @@ export const config = {
     token: optional("WHATSAPP_TOKEN"),
     phoneNumberId: optional("WHATSAPP_PHONE_NUMBER_ID"),
     webhookVerifyToken: optional("WHATSAPP_WEBHOOK_VERIFY_TOKEN"),
+    appSecret: optional("WHATSAPP_APP_SECRET"),
   },
 
   mpesa: {
@@ -62,6 +63,7 @@ export const config = {
     shortcode: optional("MPESA_SHORTCODE"),
     passkey: optional("MPESA_PASSKEY"),
     callbackUrl: optional("MPESA_CALLBACK_URL"),
+    callbackSecret: optional("MPESA_CALLBACK_SECRET"),
   },
 
   airtel: {
@@ -69,6 +71,7 @@ export const config = {
     clientSecret: optional("AIRTEL_CLIENT_SECRET"),
     baseUrl: optional("AIRTEL_BASE_URL", "https://openapi.airtel.africa"),
     callbackUrl: optional("AIRTEL_CALLBACK_URL"),
+    callbackSecret: optional("AIRTEL_CALLBACK_SECRET"),
   },
 
   tigo: {

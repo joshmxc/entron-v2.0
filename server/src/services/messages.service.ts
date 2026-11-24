@@ -52,7 +52,7 @@ export async function sendBulkMessages(opts: {
 
   // Load all guests in one query
   const guests = await prisma.guest.findMany({
-    where: { id: { in: guestIds } },
+    where: { id: { in: guestIds }, eventId: opts.eventId },
     select: {
       id: true,
       firstName: true,

@@ -16,6 +16,7 @@ Date: 2026-11-24
 
 ## Notes
 
+- Security fixes for findings 1–7 were implemented 2026-11-24.
 - The production build completed successfully.
 - Live dashboard content loaded successfully during the production check.
 - Security findings above require provider-specific callback verification and broader event/tenant authorization testing before public SaaS launch.

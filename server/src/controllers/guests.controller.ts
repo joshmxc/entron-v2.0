@@ -152,7 +152,7 @@ export async function removeDuplicates(req: Request, res: Response) {
 }
 
 export async function get(req: Request, res: Response) {
-  const data = await guestsService.getGuest(req.params.id);
+  const data = await guestsService.getGuest(req.params.eventId, req.params.id);
   res.json({ success: true, data });
 }
 
@@ -162,17 +162,17 @@ export async function create(req: Request, res: Response) {
 }
 
 export async function update(req: Request, res: Response) {
-  const data = await guestsService.updateGuest(req.params.id, req.body);
+  const data = await guestsService.updateGuest(req.params.eventId, req.params.id, req.body);
   res.json({ success: true, data });
 }
 
 export async function remove(req: Request, res: Response) {
-  await guestsService.deleteGuest(req.params.id);
+  await guestsService.deleteGuest(req.params.eventId, req.params.id);
   res.json({ success: true, message: "Guest deleted" });
 }
 
 export async function regenerateQR(req: Request, res: Response) {
-  const data = await guestsService.regenerateQR(req.params.id);
+  const data = await guestsService.regenerateQR(req.params.eventId, req.params.id);
   res.json({ success: true, data });
 }
 

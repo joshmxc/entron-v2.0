@@ -2,11 +2,27 @@ import { Router } from "express";
 import { authenticate, requireAdmin, requirePermission, requireStaff, isEventAssignedToStaff } from "../middleware/auth";
 import { uploadTemplate } from "../middleware/upload";
 import * as ctrl from "../controllers/invitations.controller";
+import crypto from "crypto";
+import { config } from "../config";
 
 const router = Router({ mergeParams: true });
 
-// Webhook has no auth
-router.post("/webhook", ctrl.handleWebhook);
+router.post("/webhook", (req, res, next) => {
+  const suppliedSecret = String(req.headers["x-webhook-secret"] ?? "");
+  if (config.whatsapp.webhookVerifyToken && suppliedSecret === config.whatsapp.webhookVerifyToken) {
+    next();
+    return;
+  }
+  const signature = String(req.headers["x-hub-signature-256"] ?? "");
+  if (config.whatsapp.appSecret && signature.startsWith("sha256=")) {
+    const expected = `sha256=${crypto.createHmac("sha256", config.whatsapp.appSecret).update(JSON.stringify(req.body)).digest("hex")}`;
+    if (signature.length === expected.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      next();
+      return;
+    }
+  }
+  res.status(401).json({ success: false, error: "Invalid WhatsApp webhook credential" });
+}, ctrl.handleWebhook);
 
 router.use(authenticate, requireStaff);
 router.use(async (req, res, next) => {

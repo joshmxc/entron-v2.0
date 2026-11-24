@@ -20,6 +20,10 @@ export async function airtelCallback(req: Request, res: Response) {
 }
 
 export async function list(req: Request, res: Response) {
+  if (!req.query.eventId) {
+    res.status(400).json({ success: false, error: "eventId is required" });
+    return;
+  }
   const data = await paymentsService.listPayments(
     req.query.eventId as string,
     Number(req.query.page) || 1,
@@ -29,7 +33,12 @@ export async function list(req: Request, res: Response) {
 }
 
 export async function getOne(req: Request, res: Response) {
-  const data = await paymentsService.getPayment(req.params.id);
+  const eventId = req.query.eventId as string;
+  if (!eventId) {
+    res.status(400).json({ success: false, error: "eventId is required" });
+    return;
+  }
+  const data = await paymentsService.getPayment(eventId, req.params.id);
   if (!data) { res.status(404).json({ success: false, error: "Payment not found" }); return; }
   res.json({ success: true, data });
 }

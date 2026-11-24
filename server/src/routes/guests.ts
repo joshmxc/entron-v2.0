@@ -53,6 +53,6 @@ router.post("/import", requirePermission("canManageGuests"), uploadExcel.single(
 router.get("/:id", ctrl.get);
 router.patch("/:id", validateBody(updateSchema), requirePermission("canManageGuests"), ctrl.update);
 router.delete("/:id", requireAdmin, ctrl.remove);
-router.post("/:id/regenerate-qr", ctrl.regenerateQR);
+router.post("/:id/regenerate-qr", requirePermission("canManageGuests"), ctrl.regenerateQR);
 
 export default router;
