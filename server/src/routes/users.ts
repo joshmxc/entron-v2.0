@@ -8,9 +8,9 @@ const router = Router();
 router.use(authenticate, requireAdmin);
 
 const createSchema = z.object({
-  name: z.string().min(2),
-  username: z.string().min(3).regex(/^[a-zA-Z0-9._-]+$/),
-  phone: z.string().min(9),
+  name: z.string().trim().min(2),
+  username: z.string().trim().min(3).regex(/^[a-zA-Z0-9._-]+$/),
+  phone: z.string().trim().min(9),
   password: z.string().min(6),
   role: z.enum(["ADMIN", "STAFF"]).default("STAFF"),
   canScan: z.boolean().optional(),

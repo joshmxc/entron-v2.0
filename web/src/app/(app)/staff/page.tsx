@@ -37,10 +37,33 @@ export default function StaffPage() {
 
   const addStaff = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (form.name.length < 2 || form.username.length < 3 || form.phone.length < 9 || form.password.length < 6) return;
+    const generatedUsername = form.username.trim()
+      || form.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, ".");
+    if (form.name.trim().length < 2) {
+      setToast("Enter the staff member's full name.");
+      return;
+    }
+    if (generatedUsername.length < 3) {
+      setToast("Enter a valid username.");
+      return;
+    }
+    if (form.phone.replace(/\D/g, "").length < 9) {
+      setToast("Enter a valid phone number.");
+      return;
+    }
+    if (form.password.length < 6) {
+      setToast("Password must contain at least 6 characters.");
+      return;
+    }
     setSaving(true);
     try {
-      await api.post("/users", form);
+      await api.post("/users", {
+        ...form,
+        name: form.name.trim(),
+        username: generatedUsername,
+        phone: form.phone.trim(),
+        password: form.password,
+      });
       setForm({
         name: "",
         username: "",

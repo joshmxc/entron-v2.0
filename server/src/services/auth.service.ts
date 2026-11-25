@@ -105,8 +105,19 @@ export async function createUser(data: {
   canSendMessages?: boolean;
   eventIds?: string[];
 }) {
+  const phoneDigits = data.phone.replace(/\D/g, "");
+  const phoneVariants = new Set<string>([data.phone, phoneDigits]);
+  if (/^0\d{9}$/.test(phoneDigits)) phoneVariants.add(`255${phoneDigits.slice(1)}`);
+  if (/^255\d{9}$/.test(phoneDigits)) phoneVariants.add(`0${phoneDigits.slice(3)}`);
+  if (/^[67]\d{8}$/.test(phoneDigits)) phoneVariants.add(`255${phoneDigits}`);
+
   const existing = await prisma.user.findFirst({
-    where: { OR: [{ phone: data.phone }, { username: data.username }] },
+    where: {
+      OR: [
+        { username: data.username },
+        ...Array.from(phoneVariants).map((phone) => ({ phone })),
+      ],
+    },
   });
   if (existing) throw { status: 409, message: "Phone number or username already registered" };
 
