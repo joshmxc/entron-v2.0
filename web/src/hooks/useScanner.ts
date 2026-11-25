@@ -115,6 +115,7 @@ export function useScanner(eventId: string) {
     } else if (pending.uniqueCode) {
       await handleUniqueCode(pending.uniqueCode, admissionCount);
     }
+    pendingScanRef.current = null;
   }, [handleScan, handleUniqueCode]);
 
   const startScanning = useCallback(async () => {
