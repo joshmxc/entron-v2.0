@@ -2,11 +2,13 @@
 
 import { use, useState } from "react";
 import useSWR from "swr";
-import { Search, Users, Phone } from "lucide-react";
+import { Search, Users, Phone, CheckCircle2 } from "lucide-react";
 
 interface Guest {
   fullName: string;
   phone: string;
+  smsReceived: boolean;
+  whatsappReceived: boolean;
 }
 
 export default function PublicGuestListPage({
@@ -36,7 +38,7 @@ export default function PublicGuestListPage({
             <Users className="h-7 w-7 text-white" />
           </div>
           <h1 className="text-2xl font-bold">{eventName}</h1>
-          <p className="mt-1 text-sm text-slate-400">Guest name and phone list</p>
+          <p className="mt-1 text-sm text-slate-400">Guest name, phone and card delivery status</p>
         </div>
 
         <div className="relative mb-4">
@@ -57,25 +59,63 @@ export default function PublicGuestListPage({
             {guests.length === 0 ? (
               <p className="py-10 text-center text-slate-500">No matching guests found.</p>
             ) : (
-              guests.map((guest, index) => (
-                <div
-                  key={`${guest.fullName}-${guest.phone}-${index}`}
-                  className="flex items-center gap-3 border-b border-slate-800 px-4 py-4 last:border-b-0"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600/15 text-sm font-bold text-blue-400">
-                    {guest.fullName.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-slate-100">{guest.fullName || "—"}</p>
-                    {guest.phone && (
-                      <p className="mt-0.5 flex items-center gap-1 text-sm text-slate-400">
-                        <Phone className="h-3.5 w-3.5" />
-                        {guest.phone}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[620px] table-fixed text-left">
+                  <thead className="border-b border-slate-800 bg-slate-950/60">
+                    <tr>
+                      <th className="w-[34%] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Name</th>
+                      <th className="w-[28%] px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Phone</th>
+                      <th className="w-[19%] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">SMS</th>
+                      <th className="w-[19%] px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">WhatsApp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {guests.map((guest, index) => (
+                      <tr
+                        key={`${guest.fullName}-${guest.phone}-${index}`}
+                        className="border-b border-slate-800 last:border-b-0"
+                      >
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600/15 text-sm font-bold text-blue-400">
+                              {guest.fullName.charAt(0).toUpperCase()}
+                            </div>
+                            <p className="truncate font-medium text-slate-100">{guest.fullName || "—"}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          {guest.phone ? (
+                            <p className="flex items-center gap-1 text-sm text-slate-300">
+                              <Phone className="h-3.5 w-3.5 text-slate-500" />
+                              {guest.phone}
+                            </p>
+                          ) : (
+                            <span className="text-sm text-slate-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {guest.smsReceived ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-green-700/40 bg-green-950/40 px-2 py-1 text-xs font-semibold text-green-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Received
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-500">Not sent</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {guest.whatsappReceived ? (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-green-700/40 bg-green-950/40 px-2 py-1 text-xs font-semibold text-green-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> Received
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-500">Not sent</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}

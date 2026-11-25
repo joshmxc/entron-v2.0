@@ -109,6 +109,26 @@ router.get("/guest-list/:eventId/:token", async (req, res) => {
     },
   });
 
+  const normalizePhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.startsWith("255") && digits.length >= 12) return digits;
+    if (digits.startsWith("0") && digits.length === 10) return `255${digits.slice(1)}`;
+    if (digits.length === 9 && /^[67]/.test(digits)) return `255${digits}`;
+    return digits;
+  };
+
+  const phones = guests.map((guest) => guest.phone).filter((phone): phone is string => !!phone);
+  const delivered = await prisma.outboundMessage.findMany({
+    where: {
+      status: "SENT",
+      phone: { in: phones },
+      channel: { in: ["SMS", "WHATSAPP"] },
+    },
+    select: { phone: true, channel: true },
+  });
+  const smsPhones = new Set(delivered.filter((item) => item.channel === "SMS").map((item) => normalizePhone(item.phone)));
+  const whatsappPhones = new Set(delivered.filter((item) => item.channel === "WHATSAPP").map((item) => normalizePhone(item.phone)));
+
   res.json({
     success: true,
     data: {
@@ -116,6 +136,8 @@ router.get("/guest-list/:eventId/:token", async (req, res) => {
       guests: guests.map((guest) => ({
         fullName: `${guest.firstName} ${guest.lastName}`.trim(),
         phone: guest.phone || "",
+        smsReceived: !!guest.phone && smsPhones.has(normalizePhone(guest.phone)),
+        whatsappReceived: !!guest.phone && whatsappPhones.has(normalizePhone(guest.phone)),
       })),
     },
   });
