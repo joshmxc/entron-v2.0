@@ -8,7 +8,7 @@ import { authLimiter } from "../middleware/rateLimiter";
 const router = Router();
 
 const loginSchema = z.object({
-  phone: z.string().min(9),
+  phone: z.string().trim().min(3),
   password: z.string().min(6),
 });
 

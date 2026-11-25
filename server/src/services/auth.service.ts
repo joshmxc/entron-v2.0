@@ -7,8 +7,20 @@ import { config } from "../config";
 const REFRESH_DAYS = 7;
 
 export async function login(phone: string, password: string) {
+  const loginValue = phone.trim();
+  const normalizedPhone = loginValue.replace(/\D/g, "");
+  const phoneVariants = new Set<string>([loginValue]);
+  if (normalizedPhone) phoneVariants.add(normalizedPhone);
+  if (/^0\d{9}$/.test(normalizedPhone)) phoneVariants.add(`255${normalizedPhone.slice(1)}`);
+  if (/^255\d{9}$/.test(normalizedPhone)) phoneVariants.add(`0${normalizedPhone.slice(3)}`);
+  if (/^[67]\d{8}$/.test(normalizedPhone)) phoneVariants.add(`255${normalizedPhone}`);
   const user = await prisma.user.findFirst({
-    where: { OR: [{ phone }, { username: phone }] },
+    where: {
+      OR: [
+        { username: loginValue },
+        ...Array.from(phoneVariants).map((phone) => ({ phone })),
+      ],
+    },
   });
   if (!user || !user.isActive) throw { status: 401, message: "Invalid credentials" };
 

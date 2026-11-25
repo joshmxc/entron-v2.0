@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Eye, EyeOff, Phone, Lock } from "lucide-react";
 import api from "@/lib/api";
 import { useAuthStore } from "@/store/authStore";
+import type { AxiosError } from "axios";
 
 const schema = z.object({
   phone: z.string().min(3, "Username or phone number is required"),
@@ -33,8 +34,9 @@ export default function LoginForm() {
       setAccessToken(accessToken);
       setUser(user);
       router.push("/dashboard");
-    } catch {
-      setError("Invalid phone number or password");
+    } catch (caught) {
+      const axiosError = caught as AxiosError<{ error?: string }>;
+      setError(axiosError.response?.data?.error || "Invalid phone number or password");
     }
   };
 
