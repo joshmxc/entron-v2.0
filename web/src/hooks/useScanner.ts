@@ -109,13 +109,13 @@ export function useScanner(eventId: string) {
   const confirmAdmissions = useCallback(async (admissionCount: number) => {
     const pending = pendingScanRef.current;
     if (!pending) return;
+    pendingScanRef.current = null;
     setState("PENDING");
     if (pending.qrCode) {
       await handleScan(pending.qrCode, admissionCount);
     } else if (pending.uniqueCode) {
       await handleUniqueCode(pending.uniqueCode, admissionCount);
     }
-    pendingScanRef.current = null;
   }, [handleScan, handleUniqueCode]);
 
   const startScanning = useCallback(async () => {
@@ -164,7 +164,9 @@ export function useScanner(eventId: string) {
         if (code?.data) {
           setState("PENDING");
           handleScan(code.data).then((scanResult) => {
-            if (scanResult.status === "PENDING_ADMISSIONS") return;
+            if (scanResult.status === "PENDING_ADMISSIONS") {
+              return;
+            }
             setTimeout(() => {
               setState("COOLDOWN");
               setTimeout(() => {
