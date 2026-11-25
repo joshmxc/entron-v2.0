@@ -55,6 +55,15 @@ export async function staffDashboard(req: Request, res: Response) {
     res.status(403).json({ success: false, error: "Event is not assigned to this staff account" });
     return;
   }
-  const data = await getStaffStats(staffId, eventId as string);
-  res.json({ success: true, data });
+  const [eventStats, staffStats] = await Promise.all([
+    getEventStats(eventId as string),
+    getStaffStats(staffId, eventId as string),
+  ]);
+  res.json({
+    success: true,
+    data: {
+      event: eventStats,
+      staff: staffStats,
+    },
+  });
 }

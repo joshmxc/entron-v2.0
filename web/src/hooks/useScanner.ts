@@ -61,13 +61,14 @@ export function useScanner(eventId: string) {
           eventId,
           timestamp: new Date().toISOString(),
           deviceId: deviceIdRef.current,
+          admissionCount: selectedAdmissions,
         });
         showResult({ status: "SUCCESS", message: "Imehifadhiwa — itatumiwa baadaye" });
       } else {
         showResult({ status: "INVALID_QR", message: "Skani imeshindwa" });
       }
     }
-  }, [eventId, showResult]);
+  }, [eventId, showResult, selectedAdmissions]);
 
   const handleUniqueCode = useCallback(async (uniqueCode: string, admissionCount = 1) => {
     setState("PENDING");

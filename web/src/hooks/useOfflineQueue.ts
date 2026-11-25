@@ -18,6 +18,7 @@ export function useOfflineQueue() {
         qrCode: data.qrCode,
         eventId: data.eventId,
         offlineTimestamp: data.timestamp,
+        admissionCount: data.admissionCount ?? 1,
       }));
 
       await api.post("/scans/batch-sync", { items });

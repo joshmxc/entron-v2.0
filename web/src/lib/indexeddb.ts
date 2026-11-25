@@ -8,6 +8,7 @@ interface EntronDB extends DBSchema {
       eventId: string;
       timestamp: string;
       deviceId: string;
+      admissionCount: number;
     };
     autoIncrement: true;
   };
@@ -31,6 +32,7 @@ export async function queueOfflineScan(data: {
   eventId: string;
   timestamp: string;
   deviceId: string;
+  admissionCount: number;
 }): Promise<void> {
   const database = await getDB();
   await database.add("offline_scans", data);

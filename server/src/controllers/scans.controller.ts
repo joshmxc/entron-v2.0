@@ -17,7 +17,9 @@ export async function scan(req: Request, res: Response) {
 }
 
 export async function batchSync(req: Request, res: Response) {
-  const { items } = req.body as { items: Array<{ qrCode: string; eventId: string; offlineTimestamp?: string }> };
+  const { items } = req.body as {
+    items: Array<{ qrCode: string; eventId: string; offlineTimestamp?: string; admissionCount?: number }>;
+  };
   const result = await scansService.batchSync(items, req.user!.sub);
   res.json({ success: true, data: result });
 }
