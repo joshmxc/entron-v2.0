@@ -25,6 +25,10 @@ export default function StaffPage() {
   });
   const [saving, setSaving] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
 
   const { data: usersResult, mutate: mutateUsers } = useSWR("/users", fetcher);
   const { data: eventsResult } = useSWR("/events", fetcher);
@@ -51,10 +55,10 @@ export default function StaffPage() {
       });
       setShowForm(false);
       await mutateUsers();
-      window.alert("Staff member added successfully.");
+      setToast("Staff member added successfully.");
     } catch (error) {
       const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      window.alert(message || "Could not add the staff member.");
+      setToast(message || "Could not add the staff member.");
     } finally {
       setSaving(false);
     }
@@ -65,25 +69,25 @@ export default function StaffPage() {
     try {
       await api.patch(`/users/${id}`, patch);
       await mutateUsers();
-      window.alert(patch.password ? "Password changed successfully." : "Staff account updated.");
+      setToast(patch.password ? "Password changed successfully." : "Staff account updated.");
     } catch (error) {
       const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      window.alert(message || "Could not update the staff account.");
+      setToast(message || "Could not update the staff account.");
     } finally {
       setActionId(null);
     }
   };
 
   const removeUser = async (id: string, name: string) => {
-    if (!window.confirm(`Remove ${name}? This cannot be undone.`)) return;
     setActionId(id);
     try {
       await api.delete(`/users/${id}`);
       await mutateUsers();
-      window.alert(`${name} was removed.`);
+      setDeleteTarget(null);
+      setToast(`${name} was removed.`);
     } catch (error) {
       const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      window.alert(message || "Could not remove this staff member.");
+      setToast(message || "Could not remove this staff member.");
     } finally {
       setActionId(null);
     }
@@ -216,10 +220,9 @@ export default function StaffPage() {
                     {user.isActive ? <UserCheck className="w-4 h-4 text-blue-400" /> : <UserX className="w-4 h-4 text-red-400" />}
                   </button>
                   <button
-                    onClick={async () => {
-                      const password = window.prompt(`New password for ${String(user.name)} (minimum 6 characters):`);
-                      if (!password || password.length < 6) return;
-                      await updateUser(String(user.id), { password });
+                    onClick={() => {
+                      setNewPassword("");
+                      setResetTarget({ id: String(user.id), name: String(user.name) });
                     }}
                     title="Reset password"
                     disabled={actionId === String(user.id)}
@@ -228,7 +231,7 @@ export default function StaffPage() {
                     <KeyRound className="w-4 h-4" />
                   </button>
                   {user.role !== "ADMIN" && (
-                    <button onClick={() => removeUser(String(user.id), String(user.name))} title="Remove staff" disabled={actionId === String(user.id)} className="p-2 text-slate-400 hover:text-red-400 disabled:opacity-50">
+                    <button onClick={() => setDeleteTarget({ id: String(user.id), name: String(user.name) })} title="Remove staff" disabled={actionId === String(user.id)} className="p-2 text-slate-400 hover:text-red-400 disabled:opacity-50">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -279,6 +282,66 @@ export default function StaffPage() {
                         );
                       })}
                     </div>
+                    {toast && (
+                      <div className="fixed bottom-4 left-1/2 z-[70] -translate-x-1/2 rounded-lg border border-entron-dark-border bg-slate-900 px-4 py-3 text-sm text-slate-100 shadow-xl">
+                        <div className="flex items-center gap-4">
+                          <span>{toast}</span>
+                          <button type="button" onClick={() => setToast(null)} className="text-slate-400 hover:text-white" aria-label="Close message">x</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {resetTarget && (
+                      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="reset-password-title">
+                        <div className="w-full max-w-md rounded-xl border border-entron-dark-border bg-entron-dark-card p-5 space-y-4">
+                          <h2 id="reset-password-title" className="text-lg font-semibold text-slate-100">Reset password</h2>
+                          <p className="text-sm text-slate-400">Set a new password for {resetTarget.name}. It must contain at least 6 characters.</p>
+                          <input
+                            type="password"
+                            value={newPassword}
+                            onChange={(event) => setNewPassword(event.target.value)}
+                            placeholder="New password"
+                            className="input"
+                            autoFocus
+                          />
+                          <div className="flex gap-3">
+                            <button type="button" onClick={() => setResetTarget(null)} className="btn-secondary flex-1">Cancel</button>
+                            <button
+                              type="button"
+                              disabled={newPassword.length < 6 || actionId === resetTarget.id}
+                              onClick={async () => {
+                                await updateUser(resetTarget.id, { password: newPassword });
+                                setResetTarget(null);
+                                setNewPassword("");
+                              }}
+                              className="btn-primary flex-1"
+                            >
+                              {actionId === resetTarget.id ? "Saving..." : "Reset Password"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {deleteTarget && (
+                      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="remove-staff-title">
+                        <div className="w-full max-w-md rounded-xl border border-entron-dark-border bg-entron-dark-card p-5 space-y-4">
+                          <h2 id="remove-staff-title" className="text-lg font-semibold text-slate-100">Remove staff member</h2>
+                          <p className="text-sm text-slate-400">Remove {deleteTarget.name}? This cannot be undone.</p>
+                          <div className="flex gap-3">
+                            <button type="button" onClick={() => setDeleteTarget(null)} className="btn-secondary flex-1">Cancel</button>
+                            <button
+                              type="button"
+                              disabled={actionId === deleteTarget.id}
+                              onClick={() => removeUser(deleteTarget.id, deleteTarget.name)}
+                              className="btn-primary flex-1 !bg-red-600 hover:!bg-red-500"
+                            >
+                              {actionId === deleteTarget.id ? "Removing..." : "Remove Staff"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
