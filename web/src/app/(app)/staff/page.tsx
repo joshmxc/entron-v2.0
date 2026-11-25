@@ -142,7 +142,7 @@ export default function StaffPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={addStaff} className="card space-y-4">
+        <form onSubmit={(event) => void addStaff(event)} className="card space-y-4">
           <h2 className="font-semibold text-slate-200">New Staff Member</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="input-group">
@@ -210,7 +210,7 @@ export default function StaffPage() {
 
           <div className="flex gap-3">
             <button type="button" onClick={() => setShowForm(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={saving} className="btn-primary flex-1">{saving ? "Adding..." : "Add Staff Member"}</button>
+            <button type="button" onClick={(event) => void addStaff(event)} disabled={saving} className="btn-primary flex-1">{saving ? "Adding..." : "Add Staff Member"}</button>
           </div>
         </form>
       )}
