@@ -24,6 +24,7 @@ export default function StaffPage() {
     eventIds: [] as string[],
   });
   const [saving, setSaving] = useState(false);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const { data: usersResult, mutate: mutateUsers } = useSWR("/users", fetcher);
   const { data: eventsResult } = useSWR("/events", fetcher);
@@ -50,20 +51,42 @@ export default function StaffPage() {
       });
       setShowForm(false);
       await mutateUsers();
+      window.alert("Staff member added successfully.");
+    } catch (error) {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      window.alert(message || "Could not add the staff member.");
     } finally {
       setSaving(false);
     }
   };
 
   const updateUser = async (id: string, patch: Record<string, unknown>) => {
-    await api.patch(`/users/${id}`, patch);
-    await mutateUsers();
+    setActionId(id);
+    try {
+      await api.patch(`/users/${id}`, patch);
+      await mutateUsers();
+      window.alert(patch.password ? "Password changed successfully." : "Staff account updated.");
+    } catch (error) {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      window.alert(message || "Could not update the staff account.");
+    } finally {
+      setActionId(null);
+    }
   };
 
   const removeUser = async (id: string, name: string) => {
     if (!window.confirm(`Remove ${name}? This cannot be undone.`)) return;
-    await api.delete(`/users/${id}`);
-    await mutateUsers();
+    setActionId(id);
+    try {
+      await api.delete(`/users/${id}`);
+      await mutateUsers();
+      window.alert(`${name} was removed.`);
+    } catch (error) {
+      const message = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      window.alert(message || "Could not remove this staff member.");
+    } finally {
+      setActionId(null);
+    }
   };
 
   const isOnline = (lastSeenAt: unknown) => {
@@ -187,6 +210,7 @@ export default function StaffPage() {
                   <button
                     onClick={() => updateUser(String(user.id), { isActive: !Boolean(user.isActive) })}
                     title={user.isActive ? "Deactivate account" : "Activate account"}
+                    disabled={actionId === String(user.id)}
                     className="p-2"
                   >
                     {user.isActive ? <UserCheck className="w-4 h-4 text-blue-400" /> : <UserX className="w-4 h-4 text-red-400" />}
@@ -198,12 +222,13 @@ export default function StaffPage() {
                       await updateUser(String(user.id), { password });
                     }}
                     title="Reset password"
+                    disabled={actionId === String(user.id)}
                     className="p-2 text-slate-400"
                   >
                     <KeyRound className="w-4 h-4" />
                   </button>
                   {user.role !== "ADMIN" && (
-                    <button onClick={() => removeUser(String(user.id), String(user.name))} title="Remove staff" className="p-2 text-slate-400 hover:text-red-400">
+                    <button onClick={() => removeUser(String(user.id), String(user.name))} title="Remove staff" disabled={actionId === String(user.id)} className="p-2 text-slate-400 hover:text-red-400 disabled:opacity-50">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}

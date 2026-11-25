@@ -197,6 +197,19 @@ export async function updateUser(id: string, data: Partial<{
 }
 
 export async function deleteUser(id: string) {
-  await prisma.refreshToken.deleteMany({ where: { userId: id } });
-  await prisma.user.delete({ where: { id } });
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true },
+  });
+  if (!user) throw { status: 404, message: "Staff member not found" };
+  if (user.role === "ADMIN") throw { status: 400, message: "Admin accounts cannot be deleted" };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.staffEventAssignment.deleteMany({ where: { userId: id } });
+    await tx.refreshToken.deleteMany({ where: { userId: id } });
+    await tx.scan.deleteMany({ where: { staffId: id } });
+    await tx.outboundMessage.deleteMany({ where: { sentBy: id } });
+    await tx.offlineSyncLog.deleteMany({ where: { userId: id } });
+    await tx.user.delete({ where: { id } });
+  });
 }
