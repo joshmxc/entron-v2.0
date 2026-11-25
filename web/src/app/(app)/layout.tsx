@@ -21,8 +21,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (ready && !user) router.push("/login");
-  }, [ready, user, router]);
+    if (ready && (!user || !accessToken)) router.push("/login");
+  }, [ready, user, accessToken, router]);
 
   if (!ready || !user) return null;
 

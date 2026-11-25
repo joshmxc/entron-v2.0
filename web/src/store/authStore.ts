@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: "entron-auth",
-      partialize: (state) => ({ user: state.user }),
+      partialize: (state) => ({ user: state.user, accessToken: state.accessToken }),
       skipHydration: true,
     }
   )
