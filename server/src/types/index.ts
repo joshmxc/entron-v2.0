@@ -27,6 +27,7 @@ export interface ScanPayload {
   eventId: string;
   deviceInfo?: string;
   offlineTimestamp?: string;
+  admissionCount?: number;
 }
 
 export interface ScanResult {

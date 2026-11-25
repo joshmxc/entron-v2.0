@@ -147,6 +147,11 @@ export default function ScanResult({ result, onDismiss }: Props) {
                     style={{ width: `${Math.min(100, (result.guest.admissionsUsed / result.guest.maxAdmissions) * 100)}%` }}
                   />
                 </div>
+                <p className="mt-2 text-xs text-white/60">
+                  {result.admissionCount === 2
+                    ? "Both ticket admissions admitted"
+                    : "One ticket admission admitted"}
+                </p>
               </div>
             )}
           </div>

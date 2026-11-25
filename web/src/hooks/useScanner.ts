@@ -24,6 +24,7 @@ export function useScanner(eventId: string) {
   const deviceIdRef = useRef<string | null>(null);
   const [scannerState, setScannerState] = useState<ScannerState>("IDLE");
   const [result, setResult] = useState<ScanResult | null>(null);
+  const [selectedAdmissions, setSelectedAdmissions] = useState(1);
   const { setResult: storeResult } = useScanStore();
 
   const playSound = (type: "success" | "error") => {
@@ -44,9 +45,9 @@ export function useScanner(eventId: string) {
     playSound(scanResult.status === "SUCCESS" ? "success" : "error");
   }, [storeResult]);
 
-  const handleScan = useCallback(async (qrCode: string) => {
+  const handleScan = useCallback(async (qrCode: string, admissionCount = 1) => {
     try {
-      const res = await api.post("/scans", { qrCode, eventId });
+      const res = await api.post("/scans", { qrCode, eventId, admissionCount });
       showResult(res.data.data as ScanResult);
     } catch (err: unknown) {
       const isNetworkError =
@@ -68,11 +69,11 @@ export function useScanner(eventId: string) {
     }
   }, [eventId, showResult]);
 
-  const handleUniqueCode = useCallback(async (uniqueCode: string) => {
+  const handleUniqueCode = useCallback(async (uniqueCode: string, admissionCount = 1) => {
     setState("PENDING");
     try {
       const normalized = uniqueCode.trim().toUpperCase();
-      const res = await api.post("/scans", { uniqueCode: normalized, eventId });
+      const res = await api.post("/scans", { uniqueCode: normalized, eventId, admissionCount });
       showResult(res.data.data as ScanResult);
     } catch (err: unknown) {
       const response = err as { response?: { data?: { error?: string } } };
@@ -128,7 +129,7 @@ export function useScanner(eventId: string) {
 
         if (code?.data) {
           setState("PENDING");
-          handleScan(code.data).then(() => {
+          handleScan(code.data, selectedAdmissions).then(() => {
             setTimeout(() => {
               setState("COOLDOWN");
               setTimeout(() => {
@@ -145,7 +146,7 @@ export function useScanner(eventId: string) {
     };
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [eventId, handleScan]);
+  }, [eventId, handleScan, selectedAdmissions]);
 
   const stopScanning = useCallback(() => {
     setState("IDLE");
@@ -157,5 +158,14 @@ export function useScanner(eventId: string) {
     }
   }, []);
 
-  return { videoRef, scannerState, result, startScanning, stopScanning, handleUniqueCode };
+  return {
+    videoRef,
+    scannerState,
+    result,
+    selectedAdmissions,
+    setSelectedAdmissions,
+    startScanning,
+    stopScanning,
+    handleUniqueCode,
+  };
 }

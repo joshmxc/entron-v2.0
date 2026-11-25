@@ -36,14 +36,32 @@ export async function processScan(
     return result;
   }
 
+  const requestedAdmissions = payload.admissionCount ?? 1;
+  if (requestedAdmissions > guest.maxAdmissions) {
+    return {
+      status: "LIMIT_REACHED",
+      guest: {
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        guestType: guest.guestType,
+        maxAdmissions: guest.maxAdmissions,
+        admissionsUsed: guest.admissionsUsed,
+        tableNumber: guest.tableNumber,
+      },
+      admissionCount: 0,
+      message: `Cannot admit ${requestedAdmissions}; maximum is ${guest.maxAdmissions}`,
+    };
+  }
+
   const { admissionsUsed, maxAdmissions, welcomeSmsClaimed, limitReached } = await prisma.$transaction(async (tx) => {
     const updatedGuests = await tx.$queryRaw<Array<{ admissions_used: number }>>`
       UPDATE "guests"
-      SET "admissions_used" = "admissions_used" + 1,
+      SET "admissions_used" = "admissions_used" + ${requestedAdmissions},
           "is_checked_in" = TRUE,
           "checked_in_at" = COALESCE("checked_in_at", NOW())
       WHERE "id" = ${guest.id}
-        AND "admissions_used" < "max_admissions"
+        AND "admissions_used" + ${requestedAdmissions} <= "max_admissions"
       RETURNING "admissions_used"
     `;
 
@@ -78,7 +96,7 @@ export async function processScan(
         eventId: payload.eventId,
         staffId,
         status: "SUCCESS",
-        admissionCount: 1,
+        admissionCount: requestedAdmissions,
         deviceInfo,
         syncedFromOffline: !!payload.offlineTimestamp,
         originalTimestamp: payload.offlineTimestamp ? new Date(payload.offlineTimestamp) : undefined,
@@ -154,7 +172,7 @@ export async function processScan(
       admissionsUsed,
       tableNumber: guest.tableNumber,
     },
-    admissionCount: 1,
+    admissionCount: requestedAdmissions,
     message: `Welcome, ${guest.firstName} ${guest.lastName}!`,
   };
 

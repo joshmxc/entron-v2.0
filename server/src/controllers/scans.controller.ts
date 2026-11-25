@@ -8,6 +8,7 @@ export async function scan(req: Request, res: Response) {
       uniqueCode: req.body.uniqueCode,
       eventId: req.body.eventId,
       offlineTimestamp: req.body.offlineTimestamp,
+      admissionCount: req.body.admissionCount,
     },
     req.user!.sub,
     req.headers["user-agent"]

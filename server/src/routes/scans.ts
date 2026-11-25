@@ -29,6 +29,7 @@ const scanSchema = z.object({
   uniqueCode: z.string().trim().min(4).max(20).optional(),
   eventId: z.string().uuid(),
   offlineTimestamp: z.string().datetime().optional(),
+  admissionCount: z.number().int().min(1).max(10).optional(),
 }).refine((value) => Boolean(value.qrCode || value.uniqueCode), {
   message: "QR code or unique ID is required",
 });
