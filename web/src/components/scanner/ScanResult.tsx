@@ -104,26 +104,6 @@ export default function ScanResult({ result, onDismiss, onConfirmAdmissions }: P
           ))}
         </div>
       )}
-      {isPendingAdmissions && onConfirmAdmissions && (
-        <div className="mt-5 space-y-3" onClick={(event) => event.stopPropagation()}>
-          <p className="text-sm font-semibold text-white/75">How many people are attending?</p>
-          <div className="grid grid-cols-2 gap-3">
-            {[1, 2].map((count) => (
-              count <= result.guest!.maxAdmissions && (
-                <button
-                  key={count}
-                  type="button"
-                  onClick={() => onConfirmAdmissions(count)}
-                  className="rounded-xl border border-white/20 bg-white/15 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/25"
-                >
-                  {count} {count === 1 ? "Person" : "People"}
-                </button>
-              )
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className={cn("relative w-full max-w-md rounded-[2rem] border border-white/15 bg-white/10 p-7 text-center shadow-2xl backdrop-blur-xl scan-card", config.glow)}>
         <div className={cn("mx-auto mb-5 flex h-28 w-28 items-center justify-center rounded-full border border-white/20 bg-white/10 shadow-xl scan-icon", config.glow)}>
           <Icon className={cn("h-16 w-16", config.iconColor)} strokeWidth={1.35} />
@@ -174,6 +154,34 @@ export default function ScanResult({ result, onDismiss, onConfirmAdmissions }: P
                     ? "Both ticket admissions admitted"
                     : "One ticket admission admitted"}
                 </p>
+              </div>
+            )}
+            {isPendingAdmissions && onConfirmAdmissions && (
+              <div
+                className="relative z-20 mt-5 space-y-3"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <p className="text-sm font-semibold text-white/85">
+                  How many people are attending?
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[1, 2].map((count) => (
+                    count <= result.guest!.maxAdmissions && (
+                      <button
+                        key={count}
+                        type="button"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onConfirmAdmissions(count);
+                        }}
+                        className="relative z-30 min-h-12 cursor-pointer rounded-xl border-2 border-white/30 bg-white/20 px-4 py-3 text-base font-bold text-white shadow-lg transition hover:bg-white/30 active:scale-[0.98]"
+                      >
+                        {count} {count === 1 ? "Person" : "People"}
+                      </button>
+                    )
+                  ))}
+                </div>
               </div>
             )}
           </div>

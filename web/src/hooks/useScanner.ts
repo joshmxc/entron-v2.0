@@ -109,6 +109,7 @@ export function useScanner(eventId: string) {
   const confirmAdmissions = useCallback(async (admissionCount: number) => {
     const pending = pendingScanRef.current;
     if (!pending) return;
+    setState("PENDING");
     if (pending.qrCode) {
       await handleScan(pending.qrCode, admissionCount);
     } else if (pending.uniqueCode) {
