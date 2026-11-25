@@ -36,8 +36,29 @@ export async function processScan(
     return result;
   }
 
-  const requestedAdmissions = payload.admissionCount ?? 1;
-  if (requestedAdmissions > guest.maxAdmissions) {
+  const requestedAdmissions = payload.admissionCount;
+  if (
+    requestedAdmissions === undefined &&
+    (guest.guestType === "DOUBLE" || guest.guestType === "FAMILY")
+  ) {
+    return {
+      status: "PENDING_ADMISSIONS",
+      guest: {
+        id: guest.id,
+        firstName: guest.firstName,
+        lastName: guest.lastName,
+        guestType: guest.guestType,
+        maxAdmissions: guest.maxAdmissions,
+        admissionsUsed: guest.admissionsUsed,
+        tableNumber: guest.tableNumber,
+      },
+      admissionCount: 0,
+      message: "Choose how many guests are attending",
+    };
+  }
+
+  const admissionCount = requestedAdmissions ?? 1;
+  if (admissionCount > guest.maxAdmissions) {
     return {
       status: "LIMIT_REACHED",
       guest: {
@@ -50,18 +71,18 @@ export async function processScan(
         tableNumber: guest.tableNumber,
       },
       admissionCount: 0,
-      message: `Cannot admit ${requestedAdmissions}; maximum is ${guest.maxAdmissions}`,
+      message: `Cannot admit ${admissionCount}; maximum is ${guest.maxAdmissions}`,
     };
   }
 
   const { admissionsUsed, maxAdmissions, welcomeSmsClaimed, limitReached } = await prisma.$transaction(async (tx) => {
     const updatedGuests = await tx.$queryRaw<Array<{ admissions_used: number }>>`
       UPDATE "guests"
-      SET "admissions_used" = "admissions_used" + ${requestedAdmissions},
+      SET "admissions_used" = "admissions_used" + ${admissionCount},
           "is_checked_in" = TRUE,
           "checked_in_at" = COALESCE("checked_in_at", NOW())
       WHERE "id" = ${guest.id}
-        AND "admissions_used" + ${requestedAdmissions} <= "max_admissions"
+        AND "admissions_used" + ${admissionCount} <= "max_admissions"
       RETURNING "admissions_used"
     `;
 
@@ -96,7 +117,7 @@ export async function processScan(
         eventId: payload.eventId,
         staffId,
         status: "SUCCESS",
-        admissionCount: requestedAdmissions,
+        admissionCount,
         deviceInfo,
         syncedFromOffline: !!payload.offlineTimestamp,
         originalTimestamp: payload.offlineTimestamp ? new Date(payload.offlineTimestamp) : undefined,
@@ -172,7 +193,7 @@ export async function processScan(
       admissionsUsed,
       tableNumber: guest.tableNumber,
     },
-    admissionCount: requestedAdmissions,
+    admissionCount,
     message: `Welcome, ${guest.firstName} ${guest.lastName}!`,
   };
 

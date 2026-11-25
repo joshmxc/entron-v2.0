@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 export interface ScanResult {
-  status: "SUCCESS" | "ALREADY_SCANNED" | "INVALID_QR" | "WRONG_EVENT" | "LIMIT_REACHED";
+  status: "SUCCESS" | "ALREADY_SCANNED" | "INVALID_QR" | "WRONG_EVENT" | "LIMIT_REACHED" | "PENDING_ADMISSIONS";
   guest?: {
     id: string;
     firstName: string;

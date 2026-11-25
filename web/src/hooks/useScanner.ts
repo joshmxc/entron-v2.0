@@ -22,9 +22,9 @@ export function useScanner(eventId: string) {
   const rafRef = useRef<number | null>(null);
   const stateRef = useRef<ScannerState>("IDLE");
   const deviceIdRef = useRef<string | null>(null);
+  const pendingScanRef = useRef<{ qrCode?: string; uniqueCode?: string } | null>(null);
   const [scannerState, setScannerState] = useState<ScannerState>("IDLE");
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [selectedAdmissions, setSelectedAdmissions] = useState(1);
   const { setResult: storeResult } = useScanStore();
 
   const playSound = (type: "success" | "error") => {
@@ -45,10 +45,19 @@ export function useScanner(eventId: string) {
     playSound(scanResult.status === "SUCCESS" ? "success" : "error");
   }, [storeResult]);
 
-  const handleScan = useCallback(async (qrCode: string, admissionCount = 1) => {
+  const handleScan = useCallback(async (qrCode: string, admissionCount?: number) => {
     try {
-      const res = await api.post("/scans", { qrCode, eventId, admissionCount });
-      showResult(res.data.data as ScanResult);
+      const payload: Record<string, unknown> = { qrCode, eventId };
+      if (admissionCount !== undefined) payload.admissionCount = admissionCount;
+      const res = await api.post("/scans", payload);
+      const scanResult = res.data.data as ScanResult;
+      if (scanResult.status === "PENDING_ADMISSIONS") {
+        pendingScanRef.current = { qrCode };
+      } else {
+        pendingScanRef.current = null;
+      }
+      showResult(scanResult);
+      return scanResult;
     } catch (err: unknown) {
       const isNetworkError =
         (err as { code?: string }).code === "ERR_NETWORK" ||
@@ -61,29 +70,51 @@ export function useScanner(eventId: string) {
           eventId,
           timestamp: new Date().toISOString(),
           deviceId: deviceIdRef.current,
-          admissionCount: selectedAdmissions,
+          admissionCount: 1,
         });
         showResult({ status: "SUCCESS", message: "Imehifadhiwa — itatumiwa baadaye" });
+        return { status: "SUCCESS", message: "Imehifadhiwa — itatumiwa baadaye" } as ScanResult;
       } else {
         showResult({ status: "INVALID_QR", message: "Skani imeshindwa" });
+        return { status: "INVALID_QR", message: "Skani imeshindwa" } as ScanResult;
       }
     }
-  }, [eventId, showResult, selectedAdmissions]);
+  }, [eventId, showResult]);
 
-  const handleUniqueCode = useCallback(async (uniqueCode: string, admissionCount = 1) => {
+  const handleUniqueCode = useCallback(async (uniqueCode: string, admissionCount?: number) => {
     setState("PENDING");
     try {
       const normalized = uniqueCode.trim().toUpperCase();
-      const res = await api.post("/scans", { uniqueCode: normalized, eventId, admissionCount });
-      showResult(res.data.data as ScanResult);
+      const payload: Record<string, unknown> = { uniqueCode: normalized, eventId };
+      if (admissionCount !== undefined) payload.admissionCount = admissionCount;
+      const res = await api.post("/scans", payload);
+      const scanResult = res.data.data as ScanResult;
+      if (scanResult.status === "PENDING_ADMISSIONS") {
+        pendingScanRef.current = { uniqueCode: normalized };
+      } else {
+        pendingScanRef.current = null;
+      }
+      showResult(scanResult);
+      return scanResult;
     } catch (err: unknown) {
       const response = err as { response?: { data?: { error?: string } } };
       showResult({
         status: "INVALID_QR",
         message: response.response?.data?.error || "Unique ID not found",
       });
+      return { status: "INVALID_QR", message: response.response?.data?.error || "Unique ID not found" } as ScanResult;
     }
   }, [eventId, showResult]);
+
+  const confirmAdmissions = useCallback(async (admissionCount: number) => {
+    const pending = pendingScanRef.current;
+    if (!pending) return;
+    if (pending.qrCode) {
+      await handleScan(pending.qrCode, admissionCount);
+    } else if (pending.uniqueCode) {
+      await handleUniqueCode(pending.uniqueCode, admissionCount);
+    }
+  }, [handleScan, handleUniqueCode]);
 
   const startScanning = useCallback(async () => {
     if (!videoRef.current) return;
@@ -130,7 +161,8 @@ export function useScanner(eventId: string) {
 
         if (code?.data) {
           setState("PENDING");
-          handleScan(code.data, selectedAdmissions).then(() => {
+          handleScan(code.data).then((scanResult) => {
+            if (scanResult.status === "PENDING_ADMISSIONS") return;
             setTimeout(() => {
               setState("COOLDOWN");
               setTimeout(() => {
@@ -147,7 +179,7 @@ export function useScanner(eventId: string) {
     };
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [eventId, handleScan, selectedAdmissions]);
+  }, [eventId, handleScan]);
 
   const stopScanning = useCallback(() => {
     setState("IDLE");
@@ -163,10 +195,9 @@ export function useScanner(eventId: string) {
     videoRef,
     scannerState,
     result,
-    selectedAdmissions,
-    setSelectedAdmissions,
     startScanning,
     stopScanning,
     handleUniqueCode,
+    confirmAdmissions,
   };
 }

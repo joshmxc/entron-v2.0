@@ -21,17 +21,20 @@ const STATUS_CONFIG: Record<string, {
   LIMIT_REACHED: { gradient: "from-orange-950 via-red-900 to-orange-700", glow: "shadow-orange-400/40", icon: AlertTriangle, label: "LIMIT REACHED", iconColor: "text-orange-100", subtitle: "No admissions remain" },
   INVALID_QR: { gradient: "from-slate-950 via-red-950 to-red-800", glow: "shadow-red-400/40", icon: XCircle, label: "NOT RECOGNIZED", iconColor: "text-red-100", subtitle: "Check the QR code or Unique ID" },
   WRONG_EVENT: { gradient: "from-slate-950 via-purple-950 to-purple-800", glow: "shadow-purple-400/40", icon: XCircle, label: "WRONG EVENT", iconColor: "text-purple-100", subtitle: "This ticket belongs to another event" },
+  PENDING_ADMISSIONS: { gradient: "from-slate-950 via-blue-950 to-blue-800", glow: "shadow-blue-400/40", icon: User, label: "HOW MANY?", iconColor: "text-blue-100", subtitle: "Choose ticket admissions" },
 };
 
 interface Props {
   result: ScanResultType;
   onDismiss?: () => void;
+  onConfirmAdmissions?: (admissionCount: number) => void;
 }
 
-export default function ScanResult({ result, onDismiss }: Props) {
+export default function ScanResult({ result, onDismiss, onConfirmAdmissions }: Props) {
   const config = STATUS_CONFIG[result.status] ?? STATUS_CONFIG.INVALID_QR;
   const Icon = config.icon;
   const isSuccess = result.status === "SUCCESS";
+  const isPendingAdmissions = result.status === "PENDING_ADMISSIONS";
 
   useEffect(() => {
     const AudioContextClass = window.AudioContext ||
@@ -81,7 +84,7 @@ export default function ScanResult({ result, onDismiss }: Props) {
         "scan-overlay fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden px-6 bg-gradient-to-br",
         config.gradient
       )}
-      onClick={onDismiss}
+      onClick={isPendingAdmissions ? undefined : onDismiss}
     >
       <div className="absolute inset-0 scan-grid opacity-20" />
       <div className="absolute left-1/2 top-1/2 h-[34rem] w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/10 scan-ripple" />
@@ -99,6 +102,25 @@ export default function ScanResult({ result, onDismiss }: Props) {
               }}
             />
           ))}
+        </div>
+      )}
+      {isPendingAdmissions && onConfirmAdmissions && (
+        <div className="mt-5 space-y-3" onClick={(event) => event.stopPropagation()}>
+          <p className="text-sm font-semibold text-white/75">How many people are attending?</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2].map((count) => (
+              count <= result.guest!.maxAdmissions && (
+                <button
+                  key={count}
+                  type="button"
+                  onClick={() => onConfirmAdmissions(count)}
+                  className="rounded-xl border border-white/20 bg-white/15 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/25"
+                >
+                  {count} {count === 1 ? "Person" : "People"}
+                </button>
+              )
+            ))}
+          </div>
         </div>
       )}
 
@@ -161,7 +183,9 @@ export default function ScanResult({ result, onDismiss }: Props) {
           <p className="mt-5 text-sm text-white/75">{result.message}</p>
         )}
 
-        <p className="mt-6 text-xs font-medium uppercase tracking-[0.22em] text-white/40">Tap anywhere to continue</p>
+        <p className="mt-6 text-xs font-medium uppercase tracking-[0.22em] text-white/40">
+          {isPendingAdmissions ? "Select an admission count" : "Tap anywhere to continue"}
+        </p>
       </div>
 
         <style jsx>{`
