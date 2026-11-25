@@ -1,0 +1,6 @@
+CREATE TYPE "RsvpStatus" AS ENUM ('PENDING', 'ATTENDING', 'DECLINED');
+
+ALTER TABLE "guests"
+ADD COLUMN "rsvp_status" "RsvpStatus" NOT NULL DEFAULT 'PENDING',
+ADD COLUMN "rsvp_attendees" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN "rsvp_responded_at" TIMESTAMP(3);

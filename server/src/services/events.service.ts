@@ -78,7 +78,7 @@ export async function deleteEvent(id: string) {
 }
 
 export async function getEventStats(eventId: string) {
-  const [totalGuests, checkedIn, scans, staffScans] = await Promise.all([
+  const [totalGuests, checkedIn, scans, staffScans, rsvpPending, rsvpAttending, rsvpDeclined, rsvpAdmissions] = await Promise.all([
     prisma.guest.count({ where: { eventId } }),
     prisma.guest.count({ where: { eventId, isCheckedIn: true } }),
     prisma.scan.groupBy({
@@ -92,6 +92,13 @@ export async function getEventStats(eventId: string) {
       _count: true,
       orderBy: { _count: { staffId: "desc" } },
     }),
+    prisma.guest.count({ where: { eventId, rsvpStatus: "PENDING" } }),
+    prisma.guest.count({ where: { eventId, rsvpStatus: "ATTENDING" } }),
+    prisma.guest.count({ where: { eventId, rsvpStatus: "DECLINED" } }),
+    prisma.guest.aggregate({
+      where: { eventId, rsvpStatus: "ATTENDING" },
+      _sum: { rsvpAttendees: true },
+    }),
   ]);
 
   const scanMap: Record<string, number> = {};
@@ -102,6 +109,12 @@ export async function getEventStats(eventId: string) {
     checkedIn,
     notCheckedIn: totalGuests - checkedIn,
     attendance: totalGuests > 0 ? Math.round((checkedIn / totalGuests) * 100) : 0,
+    rsvp: {
+      pending: rsvpPending,
+      attending: rsvpAttending,
+      declined: rsvpDeclined,
+      attendees: rsvpAdmissions._sum.rsvpAttendees ?? 0,
+    },
     scans: {
       total: Object.values(scanMap).reduce((a, b) => a + b, 0),
       ...scanMap,

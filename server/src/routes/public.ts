@@ -3,6 +3,75 @@ import { prisma } from "../lib/prisma";
 
 const router = Router();
 
+router.get("/rsvp/:eventId/:token/:uniqueCode", async (req, res) => {
+  const event = await prisma.event.findFirst({
+    where: { id: req.params.eventId, publicLookupToken: req.params.token, isActive: true },
+    select: { id: true, name: true, nameSwahili: true, venue: true, startDate: true },
+  });
+  if (!event) {
+    res.status(404).json({ success: false, error: "Invitation not found" });
+    return;
+  }
+
+  const guest = await prisma.guest.findFirst({
+    where: { eventId: event.id, uniqueCode: req.params.uniqueCode.toUpperCase() },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      guestType: true,
+      maxAdmissions: true,
+      rsvpStatus: true,
+      rsvpAttendees: true,
+    },
+  });
+  if (!guest) {
+    res.status(404).json({ success: false, error: "Invitation not found" });
+    return;
+  }
+  res.json({ success: true, data: { event, guest } });
+});
+
+router.post("/rsvp/:eventId/:token/:uniqueCode", async (req, res) => {
+  const status = req.body?.status;
+  const attendees = Number(req.body?.attendees ?? 0);
+  if (!["ATTENDING", "DECLINED"].includes(status)) {
+    res.status(400).json({ success: false, error: "Invalid RSVP status" });
+    return;
+  }
+
+  const event = await prisma.event.findFirst({
+    where: { id: req.params.eventId, publicLookupToken: req.params.token, isActive: true },
+    select: { id: true },
+  });
+  if (!event) {
+    res.status(404).json({ success: false, error: "Invitation not found" });
+    return;
+  }
+
+  const guest = await prisma.guest.findFirst({
+    where: { eventId: event.id, uniqueCode: req.params.uniqueCode.toUpperCase() },
+    select: { id: true, maxAdmissions: true },
+  });
+  if (!guest) {
+    res.status(404).json({ success: false, error: "Invitation not found" });
+    return;
+  }
+  const safeAttendees = status === "DECLINED"
+    ? 0
+    : Math.min(Math.max(1, Number.isFinite(attendees) ? Math.floor(attendees) : 1), guest.maxAdmissions);
+
+  await prisma.guest.update({
+    where: { id: guest.id },
+    data: {
+      rsvpStatus: status,
+      rsvpAttendees: safeAttendees,
+      rsvpRespondedAt: new Date(),
+    },
+  });
+  res.json({ success: true, data: { status, attendees: safeAttendees } });
+});
+
 router.get("/guest-list/:eventId/:token", async (req, res) => {
   const event = await prisma.event.findFirst({
     where: {

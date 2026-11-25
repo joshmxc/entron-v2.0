@@ -61,6 +61,7 @@ export default function DashboardPage() {
   const total = eventData?.totalGuests ?? 0;
   const checkedIn = eventData?.checkedIn ?? 0;
   const attendance = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+  const rsvp = eventData?.rsvp ?? { pending: 0, attending: 0, declined: 0, attendees: 0 };
   const sparkData = [12, 28, 18, 45, 32, 55, 41, checkedIn > 0 ? Math.min(checkedIn, 80) : 20];
 
   return (
@@ -120,6 +121,15 @@ export default function DashboardPage() {
             <div className="h-2.5 rounded-full bg-entron-blue transition-all duration-700" style={{ width: `${Math.min(attendance, 100)}%` }} />
           </div>
           <p className="text-xs mt-1.5" style={{ color: "var(--text-muted)" }}>{attendance}% arrived</p>
+        </div>
+      )}
+
+      {activeEvent && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <StatCard label="RSVP Pending" value={rsvp.pending.toLocaleString()} icon={Users} iconBg="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400" />
+          <StatCard label="Attending" value={rsvp.attending.toLocaleString()} icon={CheckCircle} iconBg="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400" sub={`${rsvp.attendees} people confirmed`} />
+          <StatCard label="Declined" value={rsvp.declined.toLocaleString()} icon={AlertCircle} iconBg="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" />
+          <StatCard label="Confirmed Guests" value={rsvp.attendees.toLocaleString()} icon={TrendingUp} iconBg="bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" />
         </div>
       )}
 

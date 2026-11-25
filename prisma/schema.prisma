@@ -56,6 +56,12 @@ enum MessageChannel {
   SMS
 }
 
+enum RsvpStatus {
+  PENDING
+  ATTENDING
+  DECLINED
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -142,6 +148,9 @@ model Guest {
   isCheckedIn   Boolean   @default(false) @map("is_checked_in")
   checkedInAt   DateTime? @map("checked_in_at")
   welcomeSmsAttemptedAt DateTime? @map("welcome_sms_attempted_at")
+  rsvpStatus        RsvpStatus @default(PENDING) @map("rsvp_status")
+  rsvpAttendees     Int        @default(0) @map("rsvp_attendees")
+  rsvpRespondedAt   DateTime?  @map("rsvp_responded_at")
   importBatchId String?   @map("import_batch_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
