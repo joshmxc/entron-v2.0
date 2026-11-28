@@ -40,7 +40,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale}>
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="icon" href="/entron-logo.png" />
         {/* Apply dark class before paint to avoid flash */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('entron-theme');var p=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';if((t||p)==='dark')document.documentElement.classList.add('dark');}catch(e){}})();` }} />
       </head>
