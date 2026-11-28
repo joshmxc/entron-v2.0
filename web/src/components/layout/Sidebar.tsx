@@ -37,9 +37,11 @@ export default function Sidebar() {
       {/* Logo */}
       <div className="p-5" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-entron-blue rounded-xl flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-lg leading-none">E</span>
-          </div>
+          <img
+            src="/entron-logo.png"
+            alt="Entron"
+            className="w-10 h-10 rounded-lg object-contain bg-black"
+          />
           <div>
             <p className="font-bold text-base" style={{ color: "var(--text)" }}>Entron</p>
             <p className="text-xs" style={{ color: "var(--text-muted)" }}>
